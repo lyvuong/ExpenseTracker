@@ -1,5 +1,5 @@
-import type { ExpenseCategory, LedgerEntry, LedgerSource, Transaction } from '../types';
-import { CATEGORIES } from '../constants/categories';
+import type { ExpenseCategory, ExpenseSubcategory, LedgerEntry, LedgerSource, Transaction } from '../types';
+import { CATEGORIES, getSubcategories } from '../constants/categories';
 
 // Every app on the shared ledger namespaces its category string with its own
 // prefix — "Expense - Grocery", "Home - HVAC - Main House",
@@ -7,8 +7,16 @@ import { CATEGORIES } from '../constants/categories';
 // can still recognise its own rows in a household's combined ledger.
 export const EXPENSE_PREFIX = 'Expense';
 
-export const buildTransactionCategory = (category: ExpenseCategory): string =>
-  `${EXPENSE_PREFIX} - ${category}`;
+/**
+ * "Expense - Digital & Tech - Domains & Hosting", or "Expense - Grocery" when
+ * no subcategory was picked. Same hyphen concatenation CarTracker uses to
+ * append the vehicle, so sibling apps parse our rows the way we parse theirs.
+ */
+export const buildTransactionCategory = (
+  category: ExpenseCategory,
+  subcategory?: ExpenseSubcategory
+): string =>
+  [EXPENSE_PREFIX, category, subcategory?.trim()].filter(Boolean).join(' - ');
 
 const KNOWN_CATEGORIES = new Set<string>(CATEGORIES);
 
@@ -36,10 +44,19 @@ export const parseTransaction = (transaction: Transaction): LedgerEntry => {
   };
 };
 
-// Expense entries whose leaf category is no longer one this app offers still
-// have to render, so fall back to "Other" rather than dropping the row.
+// Expense entries whose leaf category is no longer one this app offers —
+// "Utilities" moved to HomeTracker, "Subscriptions" was retired — still have
+// to render, so fall back to "Other" rather than dropping the row.
 export const toExpenseCategory = (label: string): ExpenseCategory =>
   (KNOWN_CATEGORIES.has(label) ? label : 'Other') as ExpenseCategory;
+
+// Only echo a subcategory back into the editor when the category still offers
+// it; otherwise the entry reopens with no subcategory selected.
+export const toExpenseSubcategory = (
+  category: ExpenseCategory,
+  detail: string
+): ExpenseSubcategory =>
+  getSubcategories(category).includes(detail) ? detail : '';
 
 export const sortEntries = (entries: LedgerEntry[]): LedgerEntry[] =>
   [...entries].sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`));

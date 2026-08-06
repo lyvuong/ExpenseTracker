@@ -11,24 +11,37 @@ export interface HouseholdMetadata {
   members: UserAuditInfo[];
 }
 
+// Utilities live in HomeTracker (they belong to a property, not to a person),
+// so they are deliberately absent here. There is no "Subscriptions" category
+// either: a subscription is a payment cadence, not a kind of spending —
+// streaming lands under Entertainment, a gym under Personal Care, and
+// software or AI tooling under Digital & Tech.
 export type ExpenseCategory =
   | 'Grocery'
   | 'Food & Dining'
   | 'Travel'
   | 'Transportation'
-  | 'Utilities'
   | 'Household Supplies'
   | 'Health & Medical'
   | 'Shopping'
+  | 'Digital & Tech'
   | 'Entertainment'
   | 'Education'
   | 'Personal Care'
   | 'Kids & Childcare'
   | 'Pets'
-  | 'Subscriptions'
   | 'Insurance'
   | 'Gifts & Donations'
   | 'Other';
+
+/**
+ * Optional second level under a category, e.g. "Domains & Hosting" under
+ * "Digital & Tech". Stored by concatenating it onto the category string the
+ * same way CarTracker appends the vehicle — "Expense - Digital & Tech -
+ * Domains & Hosting" — so the shared ledger needs no new field and entries
+ * saved before subcategories existed stay valid.
+ */
+export type ExpenseSubcategory = string;
 
 // Same payment vocabulary the other family apps write, so a household's
 // ledger stays consistent no matter which app created the entry.
@@ -46,7 +59,7 @@ export interface Transaction {
   amount: number;
   vendor: string; // store, restaurant or shop
   notes?: string;
-  category: string; // namespaced, e.g. "Expense - Grocery"
+  category: string; // namespaced, e.g. "Expense - Grocery - Supermarket"
   paymentType: PaymentType;
   user: string; // household member who logged / paid
   isTaxDeductible?: boolean;
@@ -60,7 +73,7 @@ export type LedgerSource = 'Expense' | 'Home' | 'Car' | 'Other';
 export interface LedgerEntry extends Transaction {
   source: LedgerSource;
   label: string; // leaf category, e.g. "Grocery"
-  detail: string; // remaining context from other apps, e.g. "Main House"
+  detail: string; // our subcategory, or the owning app's context, e.g. "Main House"
   isEditable: boolean; // only Expense-owned entries may be edited here
 }
 
@@ -72,6 +85,7 @@ export interface ExpenseDraft {
   vendor: string;
   notes: string;
   category: ExpenseCategory;
+  subcategory: ExpenseSubcategory; // '' when the category has none or none was picked
   paymentType: PaymentType;
   user: string;
   isTaxDeductible: boolean;

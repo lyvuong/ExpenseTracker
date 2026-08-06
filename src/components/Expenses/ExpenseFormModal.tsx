@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, Trash2, Store } from 'lucide-react';
 import { CATEGORY_META, PAYMENT_TYPES, getCategoryMeta } from '../../constants/categories';
-import { toExpenseCategory, todayISO, nowTime } from '../../utils/transactions';
+import { toExpenseCategory, toExpenseSubcategory, todayISO, nowTime } from '../../utils/transactions';
 import type { ExpenseCategory, ExpenseDraft, LedgerEntry, PaymentType } from '../../types';
 
 interface ExpenseFormModalProps {
@@ -26,6 +26,7 @@ const emptyDraft = (currentUser: string, category: ExpenseCategory = 'Grocery'):
   vendor: '',
   notes: '',
   category,
+  subcategory: '',
   paymentType: 'Credit Card',
   user: currentUser,
   isTaxDeductible: false
@@ -49,6 +50,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     if (initialEntry) {
+      const category = toExpenseCategory(initialEntry.label);
       setDraft({
         id: initialEntry.id,
         date: initialEntry.date,
@@ -56,7 +58,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         amount: initialEntry.amount,
         vendor: initialEntry.vendor,
         notes: initialEntry.notes || '',
-        category: toExpenseCategory(initialEntry.label),
+        category,
+        subcategory: toExpenseSubcategory(category, initialEntry.detail),
         paymentType: initialEntry.paymentType,
         user: initialEntry.user || currentUser,
         isTaxDeductible: initialEntry.isTaxDeductible ?? false
@@ -137,7 +140,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setDraft(d => ({ ...d, category: id as ExpenseCategory }))}
+                    onClick={() => setDraft(d => ({ ...d, category: id as ExpenseCategory, subcategory: '' }))}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                       isActive
                         ? 'text-white border-transparent'
@@ -153,6 +156,36 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             </div>
             <p className="mt-2 text-[11px] text-slate-400">{activeMeta.hint}</p>
           </div>
+
+          {/* Subcategory — optional; tapping the active one clears it */}
+          {activeMeta.subcategories.length > 0 && (
+            <div>
+              <span className="field-label">
+                Subcategory <span className="font-normal normal-case text-slate-400">· optional</span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {activeMeta.subcategories.map(sub => {
+                  const isActive = draft.subcategory === sub;
+                  return (
+                    <button
+                      key={sub}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setDraft(d => ({ ...d, subcategory: isActive ? '' : sub }))}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        isActive
+                          ? 'text-white border-transparent'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                      style={isActive ? { backgroundColor: activeMeta.color } : undefined}
+                    >
+                      {sub}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Vendor */}
           <div>

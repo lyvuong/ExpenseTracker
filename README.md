@@ -32,7 +32,7 @@ Every entry is one document in the shared `transactions` collection:
 | `amount`          | number    | Dollars                                                       |
 | `vendor`          | string    | **Store, restaurant or shop**                                 |
 | `notes`           | string    | Optional                                                      |
-| `category`        | string    | Namespaced — `Expense - Grocery`                              |
+| `category`        | string    | Namespaced — `Expense - Grocery - Supermarket`                |
 | `paymentType`     | string    | Cash / Credit Card / Debit Card / Bank Transfer / Check / Other |
 | `user`            | string    | Household member who paid                                     |
 | `isTaxDeductible` | boolean   | Optional                                                      |
@@ -41,7 +41,34 @@ The `Expense - ` prefix is what lets each app pick its own rows out of a combine
 
 ### Categories
 
-Grocery · Food & Dining · Travel · Transportation · Utilities · Household Supplies · Health & Medical · Shopping · Entertainment · Education · Personal Care · Kids & Childcare · Pets · Subscriptions · Insurance · Gifts & Donations · Other
+Each category carries an optional subcategory, appended to the category string with a hyphen the way CarTracker appends the vehicle (`Car - Oil Change - 2019 - Toyota RAV4`). Picking one is never required — `Expense - Grocery` stays valid, and entries written before subcategories existed keep working.
+
+| Category            | Subcategories                                                                          |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| Grocery             | Supermarket · Warehouse Club · Produce & Market · Meat & Seafood · Bakery · Beverages    |
+| Food & Dining       | Restaurant · Takeout & Delivery · Coffee & Tea · Fast Food · Bar & Drinks · Dessert & Snacks |
+| Travel              | Flights · Lodging · Car Rental · Activities & Tours · Travel Food · Fees & Baggage       |
+| Transportation      | Fuel · Public Transit · Rideshare & Taxi · Parking · Tolls                               |
+| Household Supplies  | Cleaning · Paper Goods · Kitchen · Laundry · Storage & Organization · Tools & Hardware   |
+| Health & Medical    | Doctor Visit · Dental · Vision · Pharmacy · Therapy & Mental Health · Lab & Imaging      |
+| Shopping            | Clothing · Shoes & Accessories · Electronics · Home & Furniture · Books & Media · Sporting Goods |
+| Digital & Tech      | Domains & Hosting · Software & Apps · AI & Dev Tools · Cloud & Storage · Online Services · Devices & Accessories |
+| Entertainment       | Streaming · Movies & Theater · Concerts & Events · Games · Hobbies · Sports & Recreation |
+| Education           | Tuition · Books & Supplies · Courses & Training · Tutoring · School Fees · Exams & Certification |
+| Personal Care       | Haircut & Salon · Gym & Fitness · Spa & Massage · Cosmetics · Nails                      |
+| Kids & Childcare    | Daycare · Babysitting · School · Activities & Camps · Clothing · Toys & Gear             |
+| Pets                | Food & Treats · Vet · Grooming · Supplies · Boarding & Sitting · Medication              |
+| Insurance           | Health · Dental & Vision · Life · Disability · Umbrella                                  |
+| Gifts & Donations   | Gifts · Charity · Religious · Fundraisers · Cards & Wrapping                             |
+| Other               | Fees & Charges · Taxes · Cash Withdrawal · Reimbursable                                  |
+
+**Not here on purpose:**
+
+- **Utilities** — power, water, internet and phone belong to a property, so HomeTracker owns them; they still show up in this log as read-only `Home - Utilities` rows.
+- **Subscriptions** — a subscription is a payment cadence, not a kind of spending. Streaming goes to `Entertainment - Streaming`, a gym to `Personal Care - Gym & Fitness`, and Claude Code or a domain renewal to `Digital & Tech`.
+- **Auto and homeowners insurance** — owned by CarTracker and HomeTracker respectively.
+
+Entries still carrying a retired category render fine; they fall back to **Other** if you reopen them in the editor.
 
 ## Household sharing
 

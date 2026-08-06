@@ -23,7 +23,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     amount: 86.42,
     vendor: 'Trader Joe\'s',
     notes: 'Weekly grocery run',
-    category: 'Expense - Grocery',
+    category: 'Expense - Grocery - Supermarket',
     paymentType: 'Credit Card',
     user: 'Household Member'
   },
@@ -34,7 +34,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     amount: 24.9,
     vendor: 'Pho Saigon',
     notes: 'Lunch',
-    category: 'Expense - Food & Dining',
+    category: 'Expense - Food & Dining - Restaurant',
     paymentType: 'Debit Card',
     user: 'Household Member'
   },
@@ -45,7 +45,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     amount: 52.1,
     vendor: 'Shell',
     notes: 'Fill up',
-    category: 'Expense - Transportation',
+    category: 'Expense - Transportation - Fuel',
     paymentType: 'Credit Card',
     user: 'Household Member'
   },
@@ -56,7 +56,18 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     amount: 149.0,
     vendor: 'Target',
     notes: 'Cleaning supplies and paper goods',
-    category: 'Expense - Household Supplies',
+    category: 'Expense - Household Supplies - Cleaning',
+    paymentType: 'Credit Card',
+    user: 'Household Member'
+  },
+  {
+    id: `${DEMO_PREFIX}5`,
+    date: daysAgo(12),
+    time: '09:15',
+    amount: 21.16,
+    vendor: 'Namecheap',
+    notes: 'Domain renewal — 1 year',
+    category: 'Expense - Digital & Tech - Domains & Hosting',
     paymentType: 'Credit Card',
     user: 'Household Member'
   }

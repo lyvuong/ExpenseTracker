@@ -218,7 +218,7 @@ export const App: React.FC = () => {
       amount: draft.amount,
       vendor: draft.vendor,
       notes: draft.notes || '',
-      category: buildTransactionCategory(draft.category),
+      category: buildTransactionCategory(draft.category, draft.subcategory),
       paymentType: draft.paymentType,
       user: draft.user || memberName,
       isTaxDeductible: draft.isTaxDeductible

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Search, SlidersHorizontal, Download, Plus, ReceiptText } from 'lucide-react';
 import { EntryRow } from './EntryRow';
-import { CATEGORIES, SOURCE_META } from '../../constants/categories';
+import { CATEGORIES, SOURCE_META, getSubcategories } from '../../constants/categories';
 import { formatDayLabel, formatMoney, monthKey, monthLabel } from '../../utils/transactions';
 import type { LedgerEntry, LedgerSource } from '../../types';
 
@@ -25,6 +25,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   const [search, setSearch] = useState('');
   const [month, setMonth] = useState('all');
   const [category, setCategory] = useState('all');
+  const [subcategory, setSubcategory] = useState('all');
   const [member, setMember] = useState('all');
   const [source, setSource] = useState<LedgerSource | 'All'>('All');
   const [showFilters, setShowFilters] = useState(false);
@@ -38,19 +39,31 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
     [entries]
   );
 
+  // Only offered once a category is picked, since subcategories are per-category.
+  const subcategories = useMemo(
+    () => (category === 'all' ? [] : getSubcategories(category)),
+    [category]
+  );
+
+  const selectCategory = (next: string) => {
+    setCategory(next);
+    setSubcategory('all');
+  };
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return entries.filter(e => {
       if (source !== 'All' && e.source !== source) return false;
       if (month !== 'all' && monthKey(e.date) !== month) return false;
       if (category !== 'all' && e.label !== category) return false;
+      if (subcategory !== 'all' && e.detail !== subcategory) return false;
       if (member !== 'all' && e.user !== member) return false;
       if (!term) return true;
       return [e.vendor, e.label, e.detail, e.notes, e.user, e.paymentType]
         .filter(Boolean)
         .some(v => v!.toLowerCase().includes(term));
     });
-  }, [entries, search, month, category, member, source]);
+  }, [entries, search, month, category, subcategory, member, source]);
 
   const total = filtered.reduce((sum, e) => sum + e.amount, 0);
 
@@ -64,7 +77,8 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
     return Array.from(map.entries());
   }, [filtered]);
 
-  const hasActiveFilter = month !== 'all' || category !== 'all' || member !== 'all' || source !== 'All';
+  const hasActiveFilter =
+    month !== 'all' || category !== 'all' || subcategory !== 'all' || member !== 'all' || source !== 'All';
 
   return (
     <section className="space-y-4">
@@ -126,11 +140,25 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
             </div>
             <div>
               <label className="field-label" htmlFor="filter-category">Category</label>
-              <select id="filter-category" value={category} onChange={e => setCategory(e.target.value)} className="field">
+              <select id="filter-category" value={category} onChange={e => selectCategory(e.target.value)} className="field">
                 <option value="all">All categories</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            {subcategories.length > 0 && (
+              <div>
+                <label className="field-label" htmlFor="filter-subcategory">Subcategory</label>
+                <select
+                  id="filter-subcategory"
+                  value={subcategory}
+                  onChange={e => setSubcategory(e.target.value)}
+                  className="field"
+                >
+                  <option value="all">All subcategories</option>
+                  {subcategories.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label className="field-label" htmlFor="filter-member">Member</label>
               <select id="filter-member" value={member} onChange={e => setMember(e.target.value)} className="field">
@@ -141,7 +169,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
           </div>
           {hasActiveFilter && (
             <button
-              onClick={() => { setMonth('all'); setCategory('all'); setMember('all'); setSource('All'); }}
+              onClick={() => { setMonth('all'); selectCategory('all'); setMember('all'); setSource('All'); }}
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
               Clear filters
