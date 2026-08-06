@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded app tile -->
+  <rect width="512" height="512" rx="116" fill="url(#bg)" />
+
+  <!-- Receipt: rounded top, torn zig-zag bottom -->
+  <path d="M 148 138 C 148 122 161 109 177 109 H 335 C 351 109 364 122 364 138
+           V 386
+           L 337 362 L 310 386 L 283 362 L 256 386 L 229 362 L 202 386 L 175 362 L 148 386 Z"
+        fill="#ffffff" />
+
+  <!-- Line items -->
+  <rect x="186" y="168" width="140" height="24" rx="12" fill="#c7d2fe" />
+  <rect x="186" y="216" width="96" height="20" rx="10" fill="#e0e7ff" />
+  <rect x="186" y="258" width="118" height="20" rx="10" fill="#e0e7ff" />
+
+  <!-- Total bar -->
+  <rect x="186" y="304" width="140" height="26" rx="13" fill="#4f46e5" />
+</svg>
