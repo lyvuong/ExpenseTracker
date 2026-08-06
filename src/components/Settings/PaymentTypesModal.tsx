@@ -26,7 +26,7 @@ interface PaymentTypesModalProps {
   onDeletePaymentType: (id: string) => void;
 }
 
-export const getPaymentIcon = (name: string) => {
+const getPaymentIcon = (name: string) => {
   const lower = name.toLowerCase();
   if (lower.includes('cash')) return Banknote;
   if (lower.includes('gift')) return Gift;
