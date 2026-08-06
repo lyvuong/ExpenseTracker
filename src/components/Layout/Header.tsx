@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2.5 min-w-0">
           <img src="/favicon.svg" alt="" className="w-9 h-9 rounded-xl shrink-0" />
           <div className="min-w-0">
-            <h1 className="text-base font-extrabold tracking-tight text-slate-900 leading-none">Expense</h1>
+            <h1 className="text-base font-extrabold tracking-tight text-slate-900 leading-none">ExpenseTracker</h1>
             <button
               onClick={onOpenSettings}
               className="mt-1 flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-indigo-600 transition-colors"

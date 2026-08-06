@@ -352,7 +352,7 @@ export const App: React.FC = () => {
       <PWAInstallPrompt />
 
       <footer className="hidden sm:block border-t border-slate-200 bg-white py-5 text-center text-xs text-slate-400 no-print">
-        <p>Expense · shared household ledger · Cloudflare Pages ready · offline capable</p>
+        <p>ExpenseTracker · shared household ledger · Cloudflare Pages ready · offline capable</p>
       </footer>
     </div>
   );

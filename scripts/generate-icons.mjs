@@ -1,4 +1,4 @@
-// Rasterizes the Expense app icon (see public/favicon.svg) into the PNG sizes
+// Rasterizes the ExpenseTracker app icon (see public/favicon.svg) into the PNG sizes
 // PWA installers and iOS need. Pure Node — no native image deps to install.
 // Run with: npm run icons
 import { deflateSync } from 'node:zlib';

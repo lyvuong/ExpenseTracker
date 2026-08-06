@@ -152,21 +152,21 @@ export const exportEntriesAsCSV = (entries: LedgerEntry[]): void => {
   const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
   downloadBlob(
     new Blob([csv], { type: 'text/csv;charset=utf-8;' }),
-    `Expense_Log_${new Date().toISOString().split('T')[0]}.csv`
+    `ExpenseTracker_Log_${new Date().toISOString().split('T')[0]}.csv`
   );
 };
 
 export const exportTransactionsAsJSON = (transactions: Transaction[]): void => {
   const backup = {
     version: '1.0',
-    app: 'Expense',
+    app: 'ExpenseTracker',
     exportDate: new Date().toISOString(),
     total: formatMoney(transactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0)),
     transactions
   };
   downloadBlob(
     new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }),
-    `Expense_Backup_${new Date().toISOString().split('T')[0]}.json`
+    `ExpenseTracker_Backup_${new Date().toISOString().split('T')[0]}.json`
   );
 };
 

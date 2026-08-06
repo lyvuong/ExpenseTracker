@@ -27,8 +27,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onGoogleSignIn }) => {
       <div className="max-w-sm w-full card p-8 space-y-7">
 
         <div className="text-center space-y-3">
-          <img src="/favicon.svg" alt="Expense app icon" className="w-16 h-16 mx-auto rounded-2xl shadow-lg shadow-indigo-500/20" />
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Expense</h1>
+          <img src="/favicon.svg" alt="ExpenseTracker app icon" className="w-16 h-16 mx-auto rounded-2xl shadow-lg shadow-indigo-500/20" />
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">ExpenseTracker</h1>
           <p className="text-sm text-slate-500 leading-relaxed">
             The shared household expense log — groceries, dining, travel and everything in between.
           </p>
@@ -75,7 +75,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onGoogleSignIn }) => {
       </div>
 
       <footer className="mt-8 text-center text-xs text-slate-400">
-        <p>Expense · Progressive Web App · Works offline</p>
+        <p>ExpenseTracker · Progressive Web App · Works offline</p>
       </footer>
     </div>
   );

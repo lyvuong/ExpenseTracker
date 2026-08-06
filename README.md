@@ -1,4 +1,4 @@
-# Expense
+# ExpenseTracker
 
 A Progressive Web App for logging everyday household expenses — groceries, lunch and dinner, travel, utilities and everything in between. Built as a sibling to **HomeTracker** and **AutoTrack**, and it writes into the *same* Firestore `transactions` ledger those apps use, so a household sees all of its spending in one place.
 
@@ -6,7 +6,7 @@ A Progressive Web App for logging everyday household expenses — groceries, lun
 Family/
 ├── AutoTrack (CarTracker)   → car service costs   → "Car - {service} - {year} - {make} {model}"
 ├── HomeTracker              → home maintenance    → "Home - {category} - {home}"
-└── Expense                  → everyday spending   → "Expense - {category}"
+└── ExpenseTracker           → everyday spending   → "Expense - {category}"
 ```
 
 ---

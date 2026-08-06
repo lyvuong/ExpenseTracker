@@ -1,6 +1,6 @@
 {
-  "short_name": "Expense",
-  "name": "Expense - Household Expense Log",
+  "short_name": "ExpenseTracker",
+  "name": "ExpenseTracker - Household Expense Log",
   "description": "Progressive Web App for logging everyday household expenses — groceries, dining, travel and more — shared with the whole family.",
   "icons": [
     {
