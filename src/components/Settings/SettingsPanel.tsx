@@ -9,7 +9,9 @@ import {
   Trash2,
   Sparkles,
   Info,
-  Check
+  Check,
+  CreditCard,
+  ChevronRight
 } from 'lucide-react';
 import type { LedgerEntry, Transaction, UserAuditInfo, UserProfile } from '../../types';
 
@@ -20,6 +22,7 @@ interface SettingsPanelProps {
   members: UserAuditInfo[];
   entries: LedgerEntry[];
   transactions: Transaction[];
+  paymentTypesCount?: number;
   onSetFamilyCode: (code: string) => Promise<{ success: boolean; message: string }>;
   onSignOut: () => void;
   onExportCSV: (entries: LedgerEntry[]) => void;
@@ -27,6 +30,7 @@ interface SettingsPanelProps {
   onImportJSON: (json: string) => void;
   onClearDemoData: () => void;
   onRestoreSampleData: () => void;
+  onManagePaymentTypes?: () => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -36,13 +40,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   members,
   entries,
   transactions,
+  paymentTypesCount = 0,
   onSetFamilyCode,
   onSignOut,
   onExportCSV,
   onExportJSON,
   onImportJSON,
   onClearDemoData,
-  onRestoreSampleData
+  onRestoreSampleData,
+  onManagePaymentTypes
 }) => {
   const [codeInput, setCodeInput] = useState(familyCode);
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -172,6 +178,28 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Payment Methods */}
+      <div className="card p-5">
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+          <CreditCard className="w-3.5 h-3.5" /> Household Payment Methods
+        </p>
+        <p className="text-xs text-slate-500 leading-relaxed mb-4">
+          Manage payment options like cards, cash, or gift cards available for household logging.
+        </p>
+        <button
+          onClick={onManagePaymentTypes}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 text-sm font-semibold text-slate-700 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-indigo-600" />
+            Manage Payment Types
+          </span>
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            {paymentTypesCount} active <ChevronRight className="w-4 h-4" />
+          </span>
+        </button>
       </div>
 
       {/* Data */}

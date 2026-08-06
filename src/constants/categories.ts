@@ -125,11 +125,11 @@ export const getSubcategories = (category: string): ExpenseSubcategory[] =>
 
 export const PAYMENT_TYPES: PaymentType[] = [
   'Cash',
-  'Credit Card',
-  'Debit Card',
-  'Bank Transfer',
-  'Check',
-  'Other'
+  'VISA - Wyndham Rewards - Anh Vuong',
+  'VISA - United Explorer - Anh Vuong',
+  'VISA - Venture X - Anh Vuong',
+  'VISA - Citi Costco - Anh Vuong',
+  'Gift Card - Vanilla - Anh Vuong'
 ];
 
 // Sibling apps writing into the same household ledger. `app` names the app

@@ -43,9 +43,17 @@ export type ExpenseCategory =
  */
 export type ExpenseSubcategory = string;
 
-// Same payment vocabulary the other family apps write, so a household's
-// ledger stays consistent no matter which app created the entry.
-export type PaymentType = 'Cash' | 'Credit Card' | 'Debit Card' | 'Bank Transfer' | 'Check' | 'Other';
+export interface PaymentTypeItem {
+  id: string;
+  name: string;
+  ownerUid?: string;
+  ownerName?: string;
+  isSystemDefault?: boolean;
+  isDefault?: boolean;
+  createdAt?: string;
+}
+
+export type PaymentType = string;
 
 // Generic, app-agnostic ledger entry. This is the exact same collection
 // HomeTracker and AutoTrack write to — users/{uid}/transactions or

@@ -20,7 +20,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import type { FirebaseConfig, Transaction, UserAuditInfo, UserProfile } from '../types';
+import type { FirebaseConfig, PaymentTypeItem, Transaction, UserAuditInfo, UserProfile } from '../types';
 import {
   getStoredFirebaseConfig,
   setStoredFirebaseConfig,
@@ -246,4 +246,53 @@ export const subscribeHouseholdMembers = (
     console.error('[Firestore] Household members sync error:', error);
     callback([]);
   });
+};
+
+// ==========================================
+// Household / User Payment Types Collection
+// ==========================================
+
+export const subscribeFirestorePaymentTypes = (
+  userId: string,
+  familyCode: string | undefined,
+  callback: (paymentTypes: PaymentTypeItem[]) => void
+) => {
+  if (!db) return () => {};
+  const target = getStorageTarget(userId, familyCode);
+  const q = collection(db, target.root, target.id, 'payment_types');
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PaymentTypeItem)));
+  }, (error) => {
+    console.error('[Firestore] Payment types sync error:', error);
+  });
+};
+
+export const saveFirestorePaymentType = async (
+  userId: string,
+  paymentType: PaymentTypeItem,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const clean = JSON.parse(JSON.stringify(paymentType));
+    await setDoc(doc(db, target.root, target.id, 'payment_types', paymentType.id), clean, { merge: true });
+    console.log(`[Firestore] Payment type saved to ${target.root}/${target.id}:`, paymentType.name);
+  } catch (err) {
+    console.error('[Firestore] Error saving payment type:', err);
+  }
+};
+
+export const deleteFirestorePaymentType = async (
+  userId: string,
+  paymentTypeId: string,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    await deleteDoc(doc(db, target.root, target.id, 'payment_types', paymentTypeId));
+  } catch (err) {
+    console.error('[Firestore] Error deleting payment type:', err);
+  }
 };

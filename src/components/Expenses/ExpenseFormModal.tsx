@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Trash2, Store } from 'lucide-react';
-import { CATEGORY_META, PAYMENT_TYPES, getCategoryMeta } from '../../constants/categories';
+import { X, Trash2, Store, Settings2 } from 'lucide-react';
+import { CATEGORY_META, PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES, getCategoryMeta } from '../../constants/categories';
 import { toExpenseCategory, toExpenseSubcategory, todayISO, nowTime } from '../../utils/transactions';
-import type { ExpenseCategory, ExpenseDraft, LedgerEntry, PaymentType } from '../../types';
+import type { ExpenseCategory, ExpenseDraft, LedgerEntry, PaymentType, PaymentTypeItem } from '../../types';
 
 interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -17,9 +17,13 @@ interface ExpenseFormModalProps {
   currentUser: string;
   /** Preselected category when opened from a quick-add tile. */
   presetCategory?: ExpenseCategory;
+  /** Custom household payment types. */
+  paymentTypes?: PaymentTypeItem[];
+  /** Callback to open payment types management modal. */
+  onManagePaymentTypes?: () => void;
 }
 
-const emptyDraft = (currentUser: string, category: ExpenseCategory = 'Grocery'): ExpenseDraft => ({
+const emptyDraft = (currentUser: string, defaultPayment: string = 'Cash', category: ExpenseCategory = 'Grocery'): ExpenseDraft => ({
   date: todayISO(),
   time: nowTime(),
   amount: 0,
@@ -27,7 +31,7 @@ const emptyDraft = (currentUser: string, category: ExpenseCategory = 'Grocery'):
   notes: '',
   category,
   subcategory: '',
-  paymentType: 'Credit Card',
+  paymentType: defaultPayment,
   user: currentUser,
   isTaxDeductible: false
 });
@@ -41,9 +45,18 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   vendors,
   members,
   currentUser,
-  presetCategory
+  presetCategory,
+  paymentTypes = [],
+  onManagePaymentTypes
 }) => {
-  const [draft, setDraft] = useState<ExpenseDraft>(() => emptyDraft(currentUser));
+  const availablePaymentTypes = useMemo(() => {
+    const rawNames = paymentTypes.length > 0 ? paymentTypes.map(p => p.name) : DEFAULT_PAYMENT_TYPES;
+    const withoutCash = rawNames.filter(n => n.toLowerCase() !== 'cash');
+    return ['Cash', ...Array.from(new Set(withoutCash))];
+  }, [paymentTypes]);
+
+  const defaultPaymentType = availablePaymentTypes[0] || 'Cash';
+  const [draft, setDraft] = useState<ExpenseDraft>(() => emptyDraft(currentUser, defaultPaymentType));
   const [amountText, setAmountText] = useState('');
   const [error, setError] = useState('');
 
@@ -66,11 +79,11 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       });
       setAmountText(initialEntry.amount ? String(initialEntry.amount) : '');
     } else {
-      setDraft(emptyDraft(currentUser, presetCategory));
+      setDraft(emptyDraft(currentUser, defaultPaymentType, presetCategory));
       setAmountText('');
     }
     setError('');
-  }, [isOpen, initialEntry, currentUser, presetCategory]);
+  }, [isOpen, initialEntry, currentUser, presetCategory, defaultPaymentType]);
 
   const memberOptions = useMemo(() => {
     const all = [currentUser, ...members, draft.user].filter(Boolean);
@@ -233,14 +246,26 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           {/* Payment & member */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label" htmlFor="payment">Payment</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="field-label !mb-0" htmlFor="payment">Payment</label>
+                {onManagePaymentTypes && (
+                  <button
+                    type="button"
+                    onClick={onManagePaymentTypes}
+                    className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-0.5"
+                    title="Manage Payment Types"
+                  >
+                    <Settings2 className="w-3 h-3" /> Manage
+                  </button>
+                )}
+              </div>
               <select
                 id="payment"
                 value={draft.paymentType}
                 onChange={e => setDraft(d => ({ ...d, paymentType: e.target.value as PaymentType }))}
                 className="field"
               >
-                {PAYMENT_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
+                {availablePaymentTypes.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div>

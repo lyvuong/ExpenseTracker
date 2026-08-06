@@ -1,9 +1,19 @@
-import type { FirebaseConfig, LedgerEntry, Transaction } from '../types';
+import type { FirebaseConfig, LedgerEntry, PaymentTypeItem, Transaction } from '../types';
 import { formatMoney } from '../utils/transactions';
 
 const TRANSACTIONS_KEY = 'expense_transactions_v1';
+const PAYMENT_TYPES_KEY = 'expense_payment_types_v1';
 const FIREBASE_CONFIG_KEY = 'expense_firebase_config_custom';
 const FAMILY_CODE_KEY = 'expense_family_code';
+
+export const INITIAL_PAYMENT_TYPES: PaymentTypeItem[] = [
+  { id: 'pt-1', name: 'Cash', isSystemDefault: true, isDefault: true },
+  { id: 'pt-2', name: 'VISA - Wyndham Rewards - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
+  { id: 'pt-3', name: 'VISA - United Explorer - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
+  { id: 'pt-4', name: 'VISA - Venture X - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
+  { id: 'pt-5', name: 'VISA - Citi Costco - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
+  { id: 'pt-6', name: 'Gift Card - Vanilla - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true }
+];
 
 // Demo rows only ever live in local storage — they are filtered out before
 // anything is seeded into a real household ledger.
@@ -24,7 +34,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Trader Joe\'s',
     notes: 'Weekly grocery run',
     category: 'Expense - Grocery - Supermarket',
-    paymentType: 'Credit Card',
+    paymentType: 'VISA - Wyndham Rewards - Anh Vuong',
     user: 'Household Member'
   },
   {
@@ -35,7 +45,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Pho Saigon',
     notes: 'Lunch',
     category: 'Expense - Food & Dining - Restaurant',
-    paymentType: 'Debit Card',
+    paymentType: 'Cash',
     user: 'Household Member'
   },
   {
@@ -46,7 +56,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Shell',
     notes: 'Fill up',
     category: 'Expense - Transportation - Fuel',
-    paymentType: 'Credit Card',
+    paymentType: 'VISA - Citi Costco - Anh Vuong',
     user: 'Household Member'
   },
   {
@@ -57,7 +67,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Target',
     notes: 'Cleaning supplies and paper goods',
     category: 'Expense - Household Supplies - Cleaning',
-    paymentType: 'Credit Card',
+    paymentType: 'Gift Card - Vanilla - Anh Vuong',
     user: 'Household Member'
   },
   {
@@ -68,10 +78,33 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Namecheap',
     notes: 'Domain renewal — 1 year',
     category: 'Expense - Digital & Tech - Domains & Hosting',
-    paymentType: 'Credit Card',
+    paymentType: 'VISA - Venture X - Anh Vuong',
     user: 'Household Member'
   }
 ];
+
+export const loadLocalPaymentTypes = (): PaymentTypeItem[] => {
+  try {
+    const raw = localStorage.getItem(PAYMENT_TYPES_KEY);
+    if (!raw) {
+      localStorage.setItem(PAYMENT_TYPES_KEY, JSON.stringify(INITIAL_PAYMENT_TYPES));
+      return INITIAL_PAYMENT_TYPES;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_PAYMENT_TYPES;
+  } catch (err) {
+    console.error('Failed to load local payment types:', err);
+    return INITIAL_PAYMENT_TYPES;
+  }
+};
+
+export const saveLocalPaymentTypes = (paymentTypes: PaymentTypeItem[]): void => {
+  try {
+    localStorage.setItem(PAYMENT_TYPES_KEY, JSON.stringify(paymentTypes));
+  } catch (err) {
+    console.error('Failed to save local payment types:', err);
+  }
+};
 
 export const loadLocalTransactions = (): Transaction[] => {
   try {

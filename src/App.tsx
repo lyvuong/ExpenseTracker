@@ -15,6 +15,7 @@ import type {
   ExpenseCategory,
   ExpenseDraft,
   LedgerEntry,
+  PaymentTypeItem,
   Transaction,
   UserAuditInfo,
   UserProfile
@@ -22,31 +23,39 @@ import type {
 import { buildTransactionCategory, parseTransaction, sortEntries } from './utils/transactions';
 import {
   DEMO_PREFIX,
+  INITIAL_PAYMENT_TYPES,
   clearDemoData,
   exportEntriesAsCSV,
   exportTransactionsAsJSON,
   getStoredFamilyCode,
   importJSONBackup,
+  loadLocalPaymentTypes,
   loadLocalTransactions,
   restoreSampleData,
+  saveLocalPaymentTypes,
   saveLocalTransactions,
   setStoredFamilyCode
 } from './services/storage';
 import {
+  deleteFirestorePaymentType,
   deleteFirestoreTransaction,
   initializeFirebaseService,
   isFirebaseConfigured,
   loginWithGoogle,
   logoutFirebase,
+  saveFirestorePaymentType,
   saveFirestoreTransaction,
   subscribeAuth,
+  subscribeFirestorePaymentTypes,
   subscribeFirestoreTransactions,
   subscribeHouseholdMembers,
   verifyOrCreateHousehold
 } from './services/firebase';
+import { PaymentTypesModal } from './components/Settings/PaymentTypesModal';
 
 export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>(() => loadLocalTransactions());
+  const [paymentTypes, setPaymentTypes] = useState<PaymentTypeItem[]>(() => loadLocalPaymentTypes());
   const [familyCode, setFamilyCodeState] = useState<string>(() => getStoredFamilyCode());
   const [householdMembers, setHouseholdMembers] = useState<UserAuditInfo[]>([]);
 
@@ -57,6 +66,7 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<LedgerEntry | null>(null);
   const [presetCategory, setPresetCategory] = useState<ExpenseCategory | undefined>(undefined);
@@ -94,12 +104,15 @@ export const App: React.FC = () => {
     }
 
     let unsubTransactions: (() => void) | null = null;
+    let unsubPaymentTypes: (() => void) | null = null;
 
     const unsubscribeAuth = subscribeAuth((userProfile) => {
       setUser(userProfile);
       setIsAuthLoading(false);
       unsubTransactions?.();
+      unsubPaymentTypes?.();
       unsubTransactions = null;
+      unsubPaymentTypes = null;
 
       if (!userProfile) {
         setStoredFamilyCode('');
@@ -132,10 +145,33 @@ export const App: React.FC = () => {
           saveLocalTransactions([]);
         }
       });
+
+      // Subscribe to payment types in cloud
+      let hasSeededPaymentTypes = false;
+      unsubPaymentTypes = subscribeFirestorePaymentTypes(userProfile.uid, familyCode, (cloudTypes) => {
+        if (cloudTypes.length > 0) {
+          hasSeededPaymentTypes = true;
+          setPaymentTypes(cloudTypes);
+          saveLocalPaymentTypes(cloudTypes);
+          return;
+        }
+        if (hasSeededPaymentTypes) {
+          setPaymentTypes([]);
+          saveLocalPaymentTypes([]);
+          return;
+        }
+        hasSeededPaymentTypes = true;
+        const localTypes = loadLocalPaymentTypes();
+        const typesToSeed = localTypes.length > 0 ? localTypes : INITIAL_PAYMENT_TYPES;
+        setPaymentTypes(typesToSeed);
+        saveLocalPaymentTypes(typesToSeed);
+        typesToSeed.forEach(pt => saveFirestorePaymentType(userProfile.uid, pt, familyCode));
+      });
     });
 
     return () => {
       unsubTransactions?.();
+      unsubPaymentTypes?.();
       unsubscribeAuth();
     };
   }, [familyCode]);
@@ -152,6 +188,45 @@ export const App: React.FC = () => {
   useEffect(() => {
     saveLocalTransactions(transactions);
   }, [transactions]);
+
+  useEffect(() => {
+    saveLocalPaymentTypes(paymentTypes);
+  }, [paymentTypes]);
+
+  const handleAddPaymentType = (name: string) => {
+    const authUserName = user?.displayName || user?.email?.split('@')[0] || memberName;
+    const newItem: PaymentTypeItem = {
+      id: `pt-${Date.now()}`,
+      name,
+      ownerUid: user?.uid,
+      ownerName: authUserName,
+      createdAt: new Date().toISOString()
+    };
+    setPaymentTypes(prev => [...prev, newItem]);
+    if (user && isFirebaseActive) {
+      saveFirestorePaymentType(user.uid, newItem, familyCode);
+    }
+  };
+
+  const handleUpdatePaymentType = (id: string, name: string) => {
+    setPaymentTypes(prev => prev.map(pt => {
+      if (pt.id === id) {
+        const updated = { ...pt, name };
+        if (user && isFirebaseActive) {
+          saveFirestorePaymentType(user.uid, updated, familyCode);
+        }
+        return updated;
+      }
+      return pt;
+    }));
+  };
+
+  const handleDeletePaymentType = (id: string) => {
+    setPaymentTypes(prev => prev.filter(pt => pt.id !== id));
+    if (user && isFirebaseActive) {
+      deleteFirestorePaymentType(user.uid, id, familyCode);
+    }
+  };
 
   const entries: LedgerEntry[] = useMemo(
     () => sortEntries(transactions.map(parseTransaction)),
@@ -332,6 +407,7 @@ export const App: React.FC = () => {
             members={householdMembers}
             entries={entries}
             transactions={transactions}
+            paymentTypesCount={paymentTypes.length}
             onSetFamilyCode={handleSetFamilyCode}
             onSignOut={handleSignOut}
             onExportCSV={exportEntriesAsCSV}
@@ -339,6 +415,7 @@ export const App: React.FC = () => {
             onImportJSON={handleImportJSON}
             onClearDemoData={handleClearDemoData}
             onRestoreSampleData={handleRestoreSampleData}
+            onManagePaymentTypes={() => setIsPaymentModalOpen(true)}
           />
         )}
       </main>
@@ -357,6 +434,19 @@ export const App: React.FC = () => {
         members={memberNames}
         currentUser={memberName}
         presetCategory={presetCategory}
+        paymentTypes={paymentTypes}
+        onManagePaymentTypes={() => setIsPaymentModalOpen(true)}
+      />
+
+      <PaymentTypesModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        paymentTypes={paymentTypes}
+        currentUserUid={user?.uid}
+        currentUserName={memberName}
+        onAddPaymentType={handleAddPaymentType}
+        onUpdatePaymentType={handleUpdatePaymentType}
+        onDeletePaymentType={handleDeletePaymentType}
       />
 
       <EntryDetailSheet entry={viewingEntry} onClose={() => setViewingEntry(null)} />
