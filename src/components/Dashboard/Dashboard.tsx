@@ -11,6 +11,8 @@ interface DashboardProps {
   familyCode: string;
   onQuickAdd: (category?: ExpenseCategory) => void;
   onViewAll: () => void;
+  onEditEntry: (entry: LedgerEntry) => void;
+  onViewEntry: (entry: LedgerEntry) => void;
 }
 
 const QUICK_CATEGORIES: ExpenseCategory[] = ['Grocery', 'Food & Dining', 'Transportation', 'Shopping'];
@@ -20,7 +22,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   memberName,
   familyCode,
   onQuickAdd,
-  onViewAll
+  onViewAll,
+  onEditEntry,
+  onViewEntry
 }) => {
   const thisMonth = currentMonthKey();
   const lastMonth = recentMonthKeys(2)[1];
@@ -190,7 +194,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <p className="px-3 py-6 text-sm text-slate-400 text-center">No entries yet.</p>
         ) : (
           <div className="divide-y divide-slate-100">
-            {recent.map(entry => <EntryRow key={entry.id} entry={entry} />)}
+            {recent.map(entry => (
+              <EntryRow key={entry.id} entry={entry} onEdit={onEditEntry} onView={onViewEntry} />
+            ))}
           </div>
         )}
       </div>

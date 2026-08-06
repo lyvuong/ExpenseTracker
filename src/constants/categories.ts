@@ -66,10 +66,11 @@ export const PAYMENT_TYPES: PaymentType[] = [
   'Other'
 ];
 
-// Sibling apps writing into the same household ledger.
-export const SOURCE_META: Record<LedgerSource, { icon: LucideIcon; color: string; label: string }> = {
-  Expense: { icon: Receipt, color: '#4f46e5', label: 'Everyday' },
-  Home: { icon: House, color: '#10b981', label: 'Home' },
-  Car: { icon: Car, color: '#0284c7', label: 'Car' },
-  Other: { icon: CircleEllipsis, color: '#94a3b8', label: 'Other' }
+// Sibling apps writing into the same household ledger. `app` names the app
+// that owns an entry, so a read-only row can say where to go to edit it.
+export const SOURCE_META: Record<LedgerSource, { icon: LucideIcon; color: string; label: string; app: string }> = {
+  Expense: { icon: Receipt, color: '#4f46e5', label: 'Everyday', app: 'ExpenseTracker' },
+  Home: { icon: House, color: '#10b981', label: 'Home', app: 'HomeTracker' },
+  Car: { icon: Car, color: '#0284c7', label: 'Car', app: 'CarTracker' },
+  Other: { icon: CircleEllipsis, color: '#94a3b8', label: 'Other', app: 'another app' }
 };

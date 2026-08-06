@@ -7,28 +7,30 @@ import type { LedgerEntry } from '../../types';
 interface EntryRowProps {
   entry: LedgerEntry;
   onEdit?: (entry: LedgerEntry) => void;
+  /** Opens the read-only detail sheet for entries owned by a sibling app. */
+  onView?: (entry: LedgerEntry) => void;
 }
 
 /**
  * One ledger line. Entries created by the sibling apps (HomeTracker,
- * AutoTrack) show up read-only with their own badge — they are edited where
- * they were created.
+ * CarTracker) show up read-only with their own badge — they are edited where
+ * they were created, so tapping one opens a detail sheet that says so.
  */
-export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit }) => {
+export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView }) => {
   const isExpense = entry.source === 'Expense';
   const meta = getCategoryMeta(entry.label);
   const sourceMeta = SOURCE_META[entry.source];
   const Icon = isExpense ? meta.icon : sourceMeta.icon;
   const color = isExpense ? meta.color : sourceMeta.color;
-  const clickable = isExpense && !!onEdit;
+  const action = isExpense ? onEdit : onView;
 
   return (
     <button
       type="button"
-      disabled={!clickable}
-      onClick={clickable ? () => onEdit!(entry) : undefined}
+      disabled={!action}
+      onClick={action ? () => action(entry) : undefined}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
-        clickable ? 'hover:bg-slate-50' : 'cursor-default'
+        action ? 'hover:bg-slate-50' : 'cursor-default'
       }`}
     >
       <span

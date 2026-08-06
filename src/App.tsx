@@ -4,6 +4,7 @@ import { TabBar } from './components/Layout/TabBar';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ExpenseList } from './components/Expenses/ExpenseList';
 import { ExpenseFormModal } from './components/Expenses/ExpenseFormModal';
+import { EntryDetailSheet } from './components/Expenses/EntryDetailSheet';
 import { Insights } from './components/Insights/Insights';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { PWAInstallPrompt } from './components/PWA/PWAInstallPrompt';
@@ -57,6 +58,7 @@ export const App: React.FC = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
+  const [viewingEntry, setViewingEntry] = useState<LedgerEntry | null>(null);
   const [presetCategory, setPresetCategory] = useState<ExpenseCategory | undefined>(undefined);
 
   const memberName = user?.displayName || 'Household Member';
@@ -196,7 +198,12 @@ export const App: React.FC = () => {
   };
 
   const openEditExpense = (entry: LedgerEntry) => {
-    if (!entry.isEditable) return;
+    // Entries owned by a sibling app get the read-only sheet instead: editing
+    // them here would be overwritten on that app's next save.
+    if (!entry.isEditable) {
+      setViewingEntry(entry);
+      return;
+    }
     setEditingEntry(entry);
     setPresetCategory(undefined);
     setIsFormOpen(true);
@@ -300,6 +307,8 @@ export const App: React.FC = () => {
             familyCode={familyCode}
             onQuickAdd={openNewExpense}
             onViewAll={() => setActiveTab('log')}
+            onEditEntry={openEditExpense}
+            onViewEntry={setViewingEntry}
           />
         )}
 
@@ -308,6 +317,7 @@ export const App: React.FC = () => {
             entries={entries}
             onAddExpense={() => openNewExpense()}
             onEditEntry={openEditExpense}
+            onViewEntry={setViewingEntry}
             onExportCSV={exportEntriesAsCSV}
           />
         )}
@@ -348,6 +358,8 @@ export const App: React.FC = () => {
         currentUser={memberName}
         presetCategory={presetCategory}
       />
+
+      <EntryDetailSheet entry={viewingEntry} onClose={() => setViewingEntry(null)} />
 
       <PWAInstallPrompt />
 

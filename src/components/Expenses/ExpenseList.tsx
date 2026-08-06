@@ -9,6 +9,7 @@ interface ExpenseListProps {
   entries: LedgerEntry[];
   onAddExpense: () => void;
   onEditEntry: (entry: LedgerEntry) => void;
+  onViewEntry: (entry: LedgerEntry) => void;
   onExportCSV: (entries: LedgerEntry[]) => void;
 }
 
@@ -18,6 +19,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   entries,
   onAddExpense,
   onEditEntry,
+  onViewEntry,
   onExportCSV
 }) => {
   const [search, setSearch] = useState('');
@@ -180,7 +182,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
               </div>
               <div className="divide-y divide-slate-100">
                 {dayEntries.map(entry => (
-                  <EntryRow key={entry.id} entry={entry} onEdit={onEditEntry} />
+                  <EntryRow key={entry.id} entry={entry} onEdit={onEditEntry} onView={onViewEntry} />
                 ))}
               </div>
             </div>
