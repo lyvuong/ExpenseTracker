@@ -75,6 +75,11 @@ export const monthKey = (isoDate: string): string => (isoDate || '').slice(0, 7)
 
 export const currentMonthKey = (): string => todayISO().slice(0, 7);
 
+/** "2026" for the year an ISO date falls in. */
+export const yearKey = (isoDate: string): string => (isoDate || '').slice(0, 4);
+
+export const currentYearKey = (): string => todayISO().slice(0, 4);
+
 export const monthLabel = (key: string, opts: { short?: boolean } = {}): string => {
   const [year, month] = key.split('-').map(Number);
   if (!year || !month) return key;

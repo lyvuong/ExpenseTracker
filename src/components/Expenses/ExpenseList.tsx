@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Search, SlidersHorizontal, Download, Plus, ReceiptText } from 'lucide-react';
 import { EntryRow } from './EntryRow';
 import { CATEGORIES, SOURCE_META, getSubcategories } from '../../constants/categories';
-import { formatDayLabel, formatMoney, monthKey, monthLabel } from '../../utils/transactions';
+import { currentYearKey, formatDayLabel, formatMoney, yearKey } from '../../utils/transactions';
 import type { LedgerEntry, LedgerSource } from '../../types';
 
 interface ExpenseListProps {
@@ -23,17 +23,35 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   onExportCSV
 }) => {
   const [search, setSearch] = useState('');
-  const [month, setMonth] = useState('all');
+  const [dateMode, setDateMode] = useState<'year' | 'range'>('year');
+  const [year, setYear] = useState(currentYearKey());
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [category, setCategory] = useState('all');
   const [subcategory, setSubcategory] = useState('all');
   const [member, setMember] = useState('all');
   const [source, setSource] = useState<LedgerSource | 'All'>('All');
   const [showFilters, setShowFilters] = useState(false);
 
-  const months = useMemo(
-    () => Array.from(new Set(entries.map(e => monthKey(e.date)).filter(Boolean))).sort().reverse(),
-    [entries]
-  );
+  const years = useMemo(() => {
+    const set = new Set(entries.map(e => yearKey(e.date)).filter(Boolean));
+    set.add(currentYearKey());
+    return Array.from(set).sort().reverse();
+  }, [entries]);
+
+  const switchToRange = () => {
+    if (dateMode !== 'range') {
+      setStartDate(prev => prev || (year !== 'all' ? `${year}-01-01` : ''));
+      setEndDate(prev => prev || (year !== 'all' ? `${year}-12-31` : ''));
+      setDateMode('range');
+    }
+  };
+
+  const isDefaultScope = dateMode === 'year' && year === currentYearKey();
+  const resetScope = () => {
+    setDateMode('year');
+    setYear(currentYearKey());
+  };
   const members = useMemo(
     () => Array.from(new Set(entries.map(e => e.user).filter(Boolean))).sort(),
     [entries]
@@ -54,7 +72,12 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
     const term = search.trim().toLowerCase();
     return entries.filter(e => {
       if (source !== 'All' && e.source !== source) return false;
-      if (month !== 'all' && monthKey(e.date) !== month) return false;
+      if (dateMode === 'year') {
+        if (year !== 'all' && yearKey(e.date) !== year) return false;
+      } else {
+        if (startDate && e.date < startDate) return false;
+        if (endDate && e.date > endDate) return false;
+      }
       if (category !== 'all' && e.label !== category) return false;
       if (subcategory !== 'all' && e.detail !== subcategory) return false;
       if (member !== 'all' && e.user !== member) return false;
@@ -63,7 +86,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
         .filter(Boolean)
         .some(v => v!.toLowerCase().includes(term));
     });
-  }, [entries, search, month, category, subcategory, member, source]);
+  }, [entries, search, dateMode, year, startDate, endDate, category, subcategory, member, source]);
 
   const total = filtered.reduce((sum, e) => sum + e.amount, 0);
 
@@ -78,7 +101,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   }, [filtered]);
 
   const hasActiveFilter =
-    month !== 'all' || category !== 'all' || subcategory !== 'all' || member !== 'all' || source !== 'All';
+    category !== 'all' || subcategory !== 'all' || member !== 'all' || source !== 'All';
 
   return (
     <section className="space-y-4">
@@ -113,6 +136,61 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
         </button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
+          <button
+            onClick={() => setDateMode('year')}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              dateMode === 'year' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Year
+          </button>
+          <button
+            onClick={switchToRange}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              dateMode === 'range' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Date range
+          </button>
+        </div>
+        {dateMode === 'year' ? (
+          <select
+            value={year}
+            onChange={e => setYear(e.target.value)}
+            className="field w-auto"
+            aria-label="Year"
+          >
+            <option value="all">All years</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="field w-auto"
+              aria-label="Start date"
+            />
+            <span className="text-xs text-slate-400">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="field w-auto"
+              aria-label="End date"
+            />
+          </div>
+        )}
+        {!isDefaultScope && (
+          <button onClick={resetScope} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+            Reset to this year
+          </button>
+        )}
+      </div>
+
       {showFilters && (
         <div className="card p-4 space-y-3">
           <div className="flex flex-wrap gap-1.5">
@@ -131,13 +209,6 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="field-label" htmlFor="filter-month">Month</label>
-              <select id="filter-month" value={month} onChange={e => setMonth(e.target.value)} className="field">
-                <option value="all">All months</option>
-                {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
-              </select>
-            </div>
             <div>
               <label className="field-label" htmlFor="filter-category">Category</label>
               <select id="filter-category" value={category} onChange={e => selectCategory(e.target.value)} className="field">
@@ -169,7 +240,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
           </div>
           {hasActiveFilter && (
             <button
-              onClick={() => { setMonth('all'); selectCategory('all'); setMember('all'); setSource('All'); }}
+              onClick={() => { selectCategory('all'); setMember('all'); setSource('All'); }}
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
               Clear filters
