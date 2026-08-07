@@ -72,6 +72,11 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
             >
               {sourceMeta.label}
             </span>
+            {entry.amount < 0 && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-amber-700 bg-amber-50">
+                Refund
+              </span>
+            )}
             {entry.isTaxDeductible && (
               <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-50">
                 Tax deductible

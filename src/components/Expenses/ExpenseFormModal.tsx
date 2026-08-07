@@ -113,12 +113,22 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   if (!isOpen) return null;
 
   const activeMeta = getCategoryMeta(draft.category);
+  const isRefund = amountText.trim().startsWith('-');
+
+  const toggleRefund = () => {
+    setAmountText(text => {
+      const trimmed = text.trim();
+      if (trimmed === '-') return '';
+      if (trimmed.startsWith('-')) return trimmed.slice(1);
+      return trimmed ? `-${trimmed}` : '-';
+    });
+  };
 
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     const amount = parseFloat(amountText);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setError('Enter an amount greater than zero.');
+    if (!Number.isFinite(amount) || amount === 0) {
+      setError('Enter an amount other than zero.');
       return;
     }
     if (!draft.vendor.trim()) {
@@ -145,7 +155,21 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
 
           {/* Amount */}
           <div>
-            <label className="field-label" htmlFor="amount">Amount</label>
+            <div className="flex items-center justify-between gap-3">
+              <label className="field-label" htmlFor="amount">Amount</label>
+              <button
+                type="button"
+                onClick={toggleRefund}
+                aria-pressed={isRefund}
+                className={`text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full transition-colors ${
+                  isRefund
+                    ? 'bg-amber-900 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Refund
+              </button>
+            </div>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-400">$</span>
               <input
@@ -153,7 +177,6 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 type="number"
                 inputMode="decimal"
                 step="0.01"
-                min="0"
                 autoFocus
                 value={amountText}
                 onChange={e => setAmountText(e.target.value)}
@@ -161,6 +184,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 className="field tabular text-3xl font-bold py-3 pl-10"
               />
             </div>
+            <p className="mt-2 text-[11px] text-slate-400">Use a negative amount to log a refund.</p>
           </div>
 
           {/* Category */}
