@@ -28,3 +28,9 @@ dist-ssr
 *.sln
 *.sw?
 Debits.csv
+public/Lincoln.db
+scripts/Lincoln.db
+.gitignore
+public/Lincoln.db-wal
+public/Lincoln.db-shm
+Lincoln.db
