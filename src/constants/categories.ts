@@ -46,7 +46,7 @@ export const CATEGORY_META: CategoryMeta[] = [
   },
   {
     id: 'Travel', icon: Plane, color: '#0ea5e9', hint: 'Flights, hotels, vacations',
-    subcategories: ['Flights', 'Lodging', 'Car Rental', 'Activities & Tours', 'Travel Food', 'Fees & Baggage']
+    subcategories: ['Flights', 'Lodging', 'Car Rental', 'Activities & Tours', 'Travel Food', 'Shopping & Gifts', 'Fees & Baggage']
   },
   {
     id: 'Transportation', icon: Bus, color: '#6366f1', hint: 'Gas, transit, parking, rideshare',
