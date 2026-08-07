@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, Trash2, Store, Settings2 } from 'lucide-react';
 import { CATEGORY_META, PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES, getCategoryMeta } from '../../constants/categories';
 import { toExpenseCategory, toExpenseSubcategory, todayISO, nowTime } from '../../utils/transactions';
-import type { ExpenseCategory, ExpenseDraft, LedgerEntry, PaymentType, PaymentTypeItem } from '../../types';
+import type { AssociableHome, AssociableVehicle, AssociationTarget, ExpenseCategory, ExpenseDraft, LedgerEntry, PaymentType, PaymentTypeItem } from '../../types';
 
 interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -21,6 +21,13 @@ interface ExpenseFormModalProps {
   paymentTypes?: PaymentTypeItem[];
   /** Callback to open payment types management modal. */
   onManagePaymentTypes?: () => void;
+  /** Vehicles/homes from the sibling apps, for the "move to" picker. */
+  vehicles?: AssociableVehicle[];
+  homes?: AssociableHome[];
+  defaultVehicleId?: string;
+  defaultHomeId?: string;
+  /** Associates the currently-open entry with a car or home. */
+  onAssociate?: (target: AssociationTarget) => void;
 }
 
 const emptyDraft = (currentUser: string, defaultPayment: string = 'Cash', category: ExpenseCategory = 'Grocery'): ExpenseDraft => ({
@@ -47,7 +54,12 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   currentUser,
   presetCategory,
   paymentTypes = [],
-  onManagePaymentTypes
+  onManagePaymentTypes,
+  vehicles = [],
+  homes = [],
+  defaultVehicleId,
+  defaultHomeId,
+  onAssociate
 }) => {
   const availablePaymentTypes = useMemo(() => {
     const rawNames = paymentTypes.length > 0 ? paymentTypes.map(p => p.name) : DEFAULT_PAYMENT_TYPES;
@@ -59,6 +71,14 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   const [draft, setDraft] = useState<ExpenseDraft>(() => emptyDraft(currentUser, defaultPaymentType));
   const [amountText, setAmountText] = useState('');
   const [error, setError] = useState('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  const [selectedHomeId, setSelectedHomeId] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedVehicleId(defaultVehicleId || vehicles[0]?.id || '');
+    setSelectedHomeId(defaultHomeId || homes[0]?.id || '');
+  }, [isOpen, defaultVehicleId, defaultHomeId, vehicles, homes]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -303,6 +323,52 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             />
             Tax deductible
           </label>
+
+          {initialEntry && (vehicles.length > 0 || homes.length > 0) && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2.5">
+              <p className="text-xs font-semibold text-slate-500">Not a general expense? Move it to:</p>
+              {vehicles.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedVehicleId}
+                    onChange={e => setSelectedVehicleId(e.target.value)}
+                    className="field flex-1 text-xs py-1.5"
+                  >
+                    {vehicles.map(v => (
+                      <option key={v.id} value={v.id}>{v.year} {v.make} {v.model}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => onAssociate?.({ app: 'car', vehicleId: selectedVehicleId })}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 whitespace-nowrap"
+                  >
+                    🚗 Move to Car
+                  </button>
+                </div>
+              )}
+              {homes.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedHomeId}
+                    onChange={e => setSelectedHomeId(e.target.value)}
+                    className="field flex-1 text-xs py-1.5"
+                  >
+                    {homes.map(h => (
+                      <option key={h.id} value={h.id}>{h.nickname}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => onAssociate?.({ app: 'home', homeId: selectedHomeId })}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 whitespace-nowrap"
+                  >
+                    🏠 Move to Home
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">

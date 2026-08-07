@@ -85,6 +85,26 @@ export interface LedgerEntry extends Transaction {
   isEditable: boolean; // only Expense-owned entries may be edited here
 }
 
+// Minimal, read-only views of CarTracker's Vehicle and HomeTracker's Home —
+// just enough to populate an "associate with" picker. Kept local here rather
+// than imported since those are separate repos/packages.
+export interface AssociableVehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  currentMileage: number;
+}
+
+export interface AssociableHome {
+  id: string;
+  nickname: string;
+}
+
+export type AssociationTarget =
+  | { app: 'car'; vehicleId: string }
+  | { app: 'home'; homeId: string };
+
 export interface ExpenseDraft {
   id?: string;
   date: string;

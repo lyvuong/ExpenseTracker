@@ -13,6 +13,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -20,7 +21,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import type { FirebaseConfig, PaymentTypeItem, Transaction, UserAuditInfo, UserProfile } from '../types';
+import type { AssociableHome, AssociableVehicle, FirebaseConfig, LedgerEntry, PaymentTypeItem, Transaction, UserAuditInfo, UserProfile } from '../types';
 import {
   getStoredFirebaseConfig,
   setStoredFirebaseConfig,
@@ -168,6 +169,92 @@ export const deleteFirestoreTransaction = async (
     await deleteDoc(doc(db, target.root, target.id, 'transactions', transactionId));
   } catch (err) {
     console.error('[Firestore] Error deleting transaction:', err);
+  }
+};
+
+// ==========================================
+// Sibling-app association (CarTracker / HomeTracker)
+// Read-only lookups of their vehicles/homes, and direct writes into their
+// records/homeRecords collections, so an Expense entry can be "moved" into
+// one of those apps by giving it a matching vehicle-/home-specific record —
+// same household root, same doc ID as the shared Transaction.
+// ==========================================
+
+export const getVehiclesOnce = async (userId: string, familyCode?: string): Promise<AssociableVehicle[]> => {
+  if (!db) return [];
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const snapshot = await getDocs(collection(db, target.root, target.id, 'vehicles'));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AssociableVehicle));
+  } catch (err) {
+    console.error('[Firestore] Error fetching vehicles:', err);
+    return [];
+  }
+};
+
+export const getHomesOnce = async (userId: string, familyCode?: string): Promise<AssociableHome[]> => {
+  if (!db) return [];
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const snapshot = await getDocs(collection(db, target.root, target.id, 'houses'));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AssociableHome));
+  } catch (err) {
+    console.error('[Firestore] Error fetching homes:', err);
+    return [];
+  }
+};
+
+// Creates the CarTracker-shaped ServiceRecord doc that pairs with `entry`'s
+// Transaction (same ID). Category/type default to 'Other'/'Other Expense'
+// since Expense has no equivalent of CarTracker's category taxonomy — the
+// user can refine it from within CarTracker afterwards.
+export const createCarRecord = async (
+  userId: string,
+  vehicleId: string,
+  mileage: number,
+  entry: LedgerEntry,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const record = {
+      id: entry.id,
+      vehicleId,
+      mileage,
+      category: 'Other',
+      type: 'Other Expense',
+      createdAt: new Date().toISOString(),
+      isTaxDeductible: Boolean(entry.isTaxDeductible)
+    };
+    await setDoc(doc(db, target.root, target.id, 'records', entry.id), record, { merge: true });
+  } catch (err) {
+    console.error('[Firestore] Error creating car record:', err);
+  }
+};
+
+// Creates the HomeTracker-shaped HomeRecord doc that pairs with `entry`'s
+// Transaction (same ID). Category/type default to 'Other'/'Expense' for the
+// same reason as createCarRecord above.
+export const createHomeRecord = async (
+  userId: string,
+  homeId: string,
+  entry: LedgerEntry,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const record = {
+      id: entry.id,
+      homeId,
+      category: 'Other',
+      type: 'Expense',
+      createdAt: new Date().toISOString()
+    };
+    await setDoc(doc(db, target.root, target.id, 'homeRecords', entry.id), record, { merge: true });
+  } catch (err) {
+    console.error('[Firestore] Error creating home record:', err);
   }
 };
 

@@ -12,6 +12,9 @@ import { LoginScreen } from './components/Auth/LoginScreen';
 
 import type {
   ActiveTab,
+  AssociableHome,
+  AssociableVehicle,
+  AssociationTarget,
   ExpenseCategory,
   ExpenseDraft,
   LedgerEntry,
@@ -28,17 +31,25 @@ import {
   exportEntriesAsCSV,
   exportTransactionsAsJSON,
   getStoredFamilyCode,
+  getStoredLastHomeId,
+  getStoredLastVehicleId,
   importJSONBackup,
   loadLocalPaymentTypes,
   loadLocalTransactions,
   restoreSampleData,
   saveLocalPaymentTypes,
   saveLocalTransactions,
-  setStoredFamilyCode
+  setStoredFamilyCode,
+  setStoredLastHomeId,
+  setStoredLastVehicleId
 } from './services/storage';
 import {
+  createCarRecord,
+  createHomeRecord,
   deleteFirestorePaymentType,
   deleteFirestoreTransaction,
+  getHomesOnce,
+  getVehiclesOnce,
   initializeFirebaseService,
   isFirebaseConfigured,
   loginWithGoogle,
@@ -58,6 +69,8 @@ export const App: React.FC = () => {
   const [paymentTypes, setPaymentTypes] = useState<PaymentTypeItem[]>(() => loadLocalPaymentTypes());
   const [familyCode, setFamilyCodeState] = useState<string>(() => getStoredFamilyCode());
   const [householdMembers, setHouseholdMembers] = useState<UserAuditInfo[]>([]);
+  const [vehicles, setVehicles] = useState<AssociableVehicle[]>([]);
+  const [homes, setHomes] = useState<AssociableHome[]>([]);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -183,6 +196,18 @@ export const App: React.FC = () => {
       return;
     }
     return subscribeHouseholdMembers(familyCode, setHouseholdMembers);
+  }, [isFirebaseActive, user, familyCode]);
+
+  // Vehicles/homes from the sibling apps, fetched once so an entry can be
+  // associated with one of them (see handleAssociateEntry).
+  useEffect(() => {
+    if (!isFirebaseActive || !user) {
+      setVehicles([]);
+      setHomes([]);
+      return;
+    }
+    getVehiclesOnce(user.uid, familyCode).then(setVehicles);
+    getHomesOnce(user.uid, familyCode).then(setHomes);
   }, [isFirebaseActive, user, familyCode]);
 
   useEffect(() => {
@@ -322,6 +347,38 @@ export const App: React.FC = () => {
     }
   };
 
+  // Associates the entry currently open in the edit modal with a vehicle in
+  // CarTracker or a home in HomeTracker, by creating that app's
+  // vehicle-/home-specific record (sharing this entry's Transaction ID) and
+  // re-namespacing the category so it reads as their row from then on.
+  const handleAssociateEntry = async (target: AssociationTarget) => {
+    if (!user || !isFirebaseActive || !editingEntry) return;
+    const entry = editingEntry;
+    let newCategory: string;
+
+    if (target.app === 'car') {
+      const vehicle = vehicles.find(v => v.id === target.vehicleId);
+      if (!vehicle) return;
+      if (!confirm(`Move this expense to CarTracker and associate it with the ${vehicle.year} ${vehicle.make} ${vehicle.model}? It will no longer be editable here.`)) return;
+      await createCarRecord(user.uid, vehicle.id, vehicle.currentMileage, entry, familyCode);
+      setStoredLastVehicleId(vehicle.id);
+      newCategory = `Car - Other - ${vehicle.year} - ${vehicle.make} ${vehicle.model}`;
+    } else {
+      const home = homes.find(h => h.id === target.homeId);
+      if (!home) return;
+      if (!confirm(`Move this expense to HomeTracker and associate it with ${home.nickname}? It will no longer be editable here.`)) return;
+      await createHomeRecord(user.uid, home.id, entry, familyCode);
+      setStoredLastHomeId(home.id);
+      newCategory = `Home - Other - ${home.nickname}`;
+    }
+
+    const updatedTransaction: Transaction = { ...entry, category: newCategory };
+    setTransactions(prev => prev.map(t => (t.id === entry.id ? updatedTransaction : t)));
+    await saveFirestoreTransaction(user.uid, updatedTransaction, familyCode);
+    setIsFormOpen(false);
+    setEditingEntry(null);
+  };
+
   const handleImportJSON = (json: string) => {
     const imported = importJSONBackup(json);
     setTransactions(imported);
@@ -436,6 +493,11 @@ export const App: React.FC = () => {
         presetCategory={presetCategory}
         paymentTypes={paymentTypes}
         onManagePaymentTypes={() => setIsPaymentModalOpen(true)}
+        vehicles={vehicles}
+        homes={homes}
+        defaultVehicleId={getStoredLastVehicleId()}
+        defaultHomeId={getStoredLastHomeId()}
+        onAssociate={handleAssociateEntry}
       />
 
       <PaymentTypesModal

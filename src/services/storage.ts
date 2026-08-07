@@ -5,6 +5,8 @@ const TRANSACTIONS_KEY = 'expense_transactions_v1';
 const PAYMENT_TYPES_KEY = 'expense_payment_types_v1';
 const FIREBASE_CONFIG_KEY = 'expense_firebase_config_custom';
 const FAMILY_CODE_KEY = 'expense_family_code';
+const LAST_VEHICLE_KEY = 'expense_last_vehicle_id';
+const LAST_HOME_KEY = 'expense_last_home_id';
 
 export const INITIAL_PAYMENT_TYPES: PaymentTypeItem[] = [
   { id: 'pt-1', name: 'Cash', isSystemDefault: true, isDefault: true },
@@ -163,6 +165,17 @@ export const setStoredFamilyCode = (code: string): void => {
   } else {
     localStorage.setItem(FAMILY_CODE_KEY, clean);
   }
+};
+
+// Remembers the last vehicle/home an entry was associated with, so the
+// "Move to Car"/"Move to Home" picker defaults to it next time.
+export const getStoredLastVehicleId = (): string => localStorage.getItem(LAST_VEHICLE_KEY) || '';
+export const setStoredLastVehicleId = (id: string): void => {
+  if (id) localStorage.setItem(LAST_VEHICLE_KEY, id);
+};
+export const getStoredLastHomeId = (): string => localStorage.getItem(LAST_HOME_KEY) || '';
+export const setStoredLastHomeId = (id: string): void => {
+  if (id) localStorage.setItem(LAST_HOME_KEY, id);
 };
 
 const downloadBlob = (blob: Blob, filename: string): void => {
