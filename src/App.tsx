@@ -350,6 +350,11 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleSaveFamilyMember = async (member: FamilyMember) => {
+    setFamilyMembers(prev => [...prev.filter(m => m.id !== member.id), member]);
+    if (user && isFirebaseActive) await saveFirestoreEntity(user.uid, 'family', member, familyCode);
+  };
+
   // Generic Entity Save / Delete (for TargetEntitiesModal)
   const handleSaveEntity = async (collectionName: string, entity: TargetEntity) => {
     if (collectionName === 'trips') handleSaveTrip(entity as Trip);
@@ -628,8 +633,10 @@ export const App: React.FC = () => {
         onManagePaymentTypes={() => setIsPaymentModalOpen(true)}
         trips={trips}
         offices={offices}
+        familyMembers={familyMembers}
         onSaveTrip={handleSaveTrip}
         onSaveOffice={handleSaveOffice}
+        onSaveFamilyMember={handleSaveFamilyMember}
         taxonomyOverrideDoc={taxonomyOverrideDoc}
         onManageTaxonomy={() => setIsTaxonomyModalOpen(true)}
         vehicles={vehicles}

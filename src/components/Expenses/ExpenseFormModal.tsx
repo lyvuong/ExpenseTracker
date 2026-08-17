@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Trash2, Store, Settings2, Plane, Plus, Building2 } from 'lucide-react';
+import { X, Trash2, Store, Settings2, Plane, Plus, Building2, UsersRound } from 'lucide-react';
 import {
   PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES,
   TARGET_META,
@@ -13,6 +13,7 @@ import type {
   AssociationTarget,
   ExpenseDraft,
   ExpenseTarget,
+  FamilyMember,
   LedgerEntry,
   Office,
   PaymentType,
@@ -41,8 +42,10 @@ interface ExpenseFormModalProps {
   onManagePaymentTypes?: () => void;
   trips?: Trip[];
   offices?: Office[];
+  familyMembers?: FamilyMember[];
   onSaveTrip?: (trip: Trip) => Promise<void> | void;
   onSaveOffice?: (office: Office) => Promise<void> | void;
+  onSaveFamilyMember?: (member: FamilyMember) => Promise<void> | void;
   taxonomyOverrideDoc?: TaxonomyOverrideDoc;
   onManageTaxonomy?: () => void;
   /** Vehicles/homes from sibling apps for the "move to" picker. */
@@ -90,8 +93,10 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   onManagePaymentTypes,
   trips = [],
   offices = [],
+  familyMembers = [],
   onSaveTrip,
   onSaveOffice,
+  onSaveFamilyMember,
   taxonomyOverrideDoc,
   onManageTaxonomy,
   vehicles = [],
@@ -112,7 +117,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   const [error, setError] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [selectedHomeId, setSelectedHomeId] = useState('');
-  const [newEntityPrompt, setNewEntityPrompt] = useState<'trip' | 'office' | null>(null);
+  const [newEntityPrompt, setNewEntityPrompt] = useState<'trip' | 'office' | 'familyMember' | null>(null);
   const [newEntityName, setNewEntityName] = useState('');
 
   useEffect(() => {
@@ -202,6 +207,13 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       };
       if (onSaveOffice) await onSaveOffice(newOffice);
       setDraft(d => ({ ...d, targetEntityId: newOffice.id, targetEntityLabel: newOffice.name }));
+    } else if (newEntityPrompt === 'familyMember') {
+      const newMember: FamilyMember = {
+        id: `fm-${Date.now()}`,
+        name
+      };
+      if (onSaveFamilyMember) await onSaveFamilyMember(newMember);
+      setDraft(d => ({ ...d, targetEntityId: newMember.id, targetEntityLabel: newMember.name }));
     }
     setNewEntityPrompt(null);
     setNewEntityName('');
@@ -274,7 +286,71 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             <p className="mt-1.5 text-[11px] text-slate-400">{TARGET_META[draft.target].description}</p>
           </div>
 
-          {/* Entity Association for Travel (Trips) or Business (Offices) */}
+          {/* Entity Association for Family (Members), Travel (Trips) or Business (Offices) */}
+          {draft.target === 'Family' && (
+            <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <UsersRound className="w-3.5 h-3.5 text-emerald-600" />
+                  For family member <span className="font-normal text-emerald-600">· optional</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setNewEntityPrompt(newEntityPrompt === 'familyMember' ? null : 'familyMember')}
+                  className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 flex items-center gap-0.5"
+                >
+                  <Plus className="w-3 h-3" /> Add Member
+                </button>
+              </div>
+
+              {newEntityPrompt === 'familyMember' ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newEntityName}
+                    onChange={e => setNewEntityName(e.target.value)}
+                    placeholder="e.g. Sarah or Mom"
+                    className="field flex-1 text-xs py-1.5 bg-white"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateQuickEntity}
+                    className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewEntityPrompt(null)}
+                    className="px-2 py-1.5 text-slate-500 text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={draft.targetEntityId || ''}
+                  onChange={e => {
+                    const id = e.target.value;
+                    const member = familyMembers.find(m => m.id === id);
+                    setDraft(d => ({
+                      ...d,
+                      targetEntityId: id || undefined,
+                      targetEntityLabel: member?.name || undefined
+                    }));
+                  }}
+                  className="field text-xs py-1.5 bg-white"
+                >
+                  <option value="">All (Entire Family)</option>
+                  {familyMembers.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
           {draft.target === 'Travel' && (
             <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2">
               <div className="flex items-center justify-between">

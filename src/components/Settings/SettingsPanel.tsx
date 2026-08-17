@@ -189,7 +189,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <Layers className="w-3.5 h-3.5" /> Domains, Entities & Category Taxonomy
         </p>
         <p className="text-xs text-slate-500 leading-relaxed mb-4">
-          Manage targets (Family, Travel, Business, Property, Fleet), create custom categories, add subcategories, and manage Trips or Offices.
+          Manage targets (Family, Travel, Business), create custom categories, add subcategories, and manage Family Members, Trips, or Offices.
         </p>
         <button
           onClick={onManageTaxonomy}
