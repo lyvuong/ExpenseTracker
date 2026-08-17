@@ -407,15 +407,46 @@ export const verifyOrCreateHousehold = async (
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      const members: UserAuditInfo[] = data.members || [];
-      const memberUids: Record<string, boolean> = data.memberUids || {};
+      const existingMembers: UserAuditInfo[] = data.members || [];
+      const memberUids: Record<string, boolean> = { ...(data.memberUids || {}) };
 
-      if (!members.some(m => m.uid === userProfile.uid) || !memberUids[userProfile.uid]) {
-        if (!members.some(m => m.uid === userProfile.uid)) {
-          members.push(auditUser);
+      // Deduplicate and update
+      const updatedMembers: UserAuditInfo[] = [];
+      let matched = false;
+
+      for (const m of existingMembers) {
+        const isUidMatch = m.uid === userProfile.uid;
+        const isEmailMatch = Boolean(
+          userProfile.email && m.email && m.email.toLowerCase() === userProfile.email.toLowerCase()
+        );
+        const isLegacyStubMatch = Boolean(
+          m.uid.startsWith('user-') &&
+          userProfile.displayName &&
+          m.displayName?.trim().toLowerCase() === userProfile.displayName?.trim().toLowerCase()
+        );
+
+        if (isUidMatch || isEmailMatch || isLegacyStubMatch) {
+          if (!matched) {
+            updatedMembers.push(auditUser);
+            memberUids[userProfile.uid] = true;
+            matched = true;
+          }
+        } else {
+          updatedMembers.push(m);
         }
+      }
+
+      if (!matched) {
+        updatedMembers.push(auditUser);
         memberUids[userProfile.uid] = true;
-        await setDoc(metaRef, { members, memberUids }, { merge: true });
+      }
+
+      const membersChanged =
+        JSON.stringify(existingMembers) !== JSON.stringify(updatedMembers) ||
+        !data.memberUids?.[userProfile.uid];
+
+      if (membersChanged) {
+        await setDoc(metaRef, { members: updatedMembers, memberUids }, { merge: true });
       }
 
       return { success: true, isNew: false, message: `Joined household ${code}.` };
@@ -452,7 +483,26 @@ export const subscribeHouseholdMembers = (
   }
   const metaRef = doc(db, 'households', familyCode.trim().toUpperCase(), 'metadata', 'info');
   return onSnapshot(metaRef, (snap) => {
-    callback(snap.exists() ? (snap.data().members || []) : []);
+    if (!snap.exists()) {
+      callback([]);
+      return;
+    }
+    const rawMembers: UserAuditInfo[] = snap.data().members || [];
+    const seenUids = new Set<string>();
+    const seenEmails = new Set<string>();
+    const uniqueMembers: UserAuditInfo[] = [];
+
+    for (const m of rawMembers) {
+      if (!m || !m.uid) continue;
+      const emailLower = m.email?.toLowerCase();
+      if (seenUids.has(m.uid) || (emailLower && seenEmails.has(emailLower))) {
+        continue;
+      }
+      seenUids.add(m.uid);
+      if (emailLower) seenEmails.add(emailLower);
+      uniqueMembers.push(m);
+    }
+    callback(uniqueMembers);
   }, (error) => {
     console.error('[Firestore] Household members sync error:', error);
     callback([]);
