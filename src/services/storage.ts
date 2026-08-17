@@ -1,10 +1,22 @@
-import type { FirebaseConfig, LedgerEntry, Office, PaymentTypeItem, Transaction, Trip } from '../types';
+import type {
+  FamilyMember,
+  FirebaseConfig,
+  LedgerEntry,
+  Office,
+  PaymentTypeItem,
+  TaxonomyOverrideDoc,
+  Transaction,
+  Trip
+} from '../types';
 import { formatMoney } from '../utils/transactions';
 
 const TRANSACTIONS_KEY = 'expense_transactions_v1';
 const PAYMENT_TYPES_KEY = 'expense_payment_types_v1';
 const TRIPS_KEY = 'expense_trips_v1';
 const OFFICES_KEY = 'expense_offices_v1';
+const FAMILY_MEMBERS_KEY = 'expense_family_members_v1';
+const TAXONOMY_OVERRIDE_KEY = 'expense_taxonomy_override_v1';
+
 const FIREBASE_CONFIG_KEY = 'expense_firebase_config_custom';
 const FAMILY_CODE_KEY = 'expense_family_code';
 const LAST_VEHICLE_KEY = 'expense_last_vehicle_id';
@@ -57,8 +69,11 @@ export const INITIAL_OFFICES: Office[] = [
   }
 ];
 
-// Demo rows only ever live in local storage — they are filtered out before
-// anything is seeded into a real household ledger.
+export const INITIAL_FAMILY_MEMBERS: FamilyMember[] = [
+  { id: 'fm-1', name: 'Anh Vuong', notes: 'Primary account manager' },
+  { id: 'fm-2', name: 'Household Member', notes: 'Family member' }
+];
+
 export const DEMO_PREFIX = 'demo-';
 
 const daysAgo = (days: number): string => {
@@ -171,16 +186,30 @@ export const saveLocalPaymentTypes = (paymentTypes: PaymentTypeItem[]): void => 
   }
 };
 
+export const loadLocalTaxonomyOverride = (familyCode?: string): TaxonomyOverrideDoc => {
+  try {
+    const key = familyCode ? `${TAXONOMY_OVERRIDE_KEY}_${familyCode.toUpperCase()}` : TAXONOMY_OVERRIDE_KEY;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const saveLocalTaxonomyOverride = (familyCode: string | undefined, overrideDoc: TaxonomyOverrideDoc): void => {
+  try {
+    const key = familyCode ? `${TAXONOMY_OVERRIDE_KEY}_${familyCode.toUpperCase()}` : TAXONOMY_OVERRIDE_KEY;
+    localStorage.setItem(key, JSON.stringify(overrideDoc));
+  } catch (err) {
+    console.error('Failed to save local taxonomy overrides:', err);
+  }
+};
+
 export const loadLocalTrips = (): Trip[] => {
   try {
     const raw = localStorage.getItem(TRIPS_KEY);
-    if (!raw) {
-      localStorage.setItem(TRIPS_KEY, JSON.stringify(INITIAL_TRIPS));
-      return INITIAL_TRIPS;
-    }
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error('Failed to load local trips:', err);
+    return raw ? JSON.parse(raw) : INITIAL_TRIPS;
+  } catch {
     return INITIAL_TRIPS;
   }
 };
@@ -196,13 +225,8 @@ export const saveLocalTrips = (trips: Trip[]): void => {
 export const loadLocalOffices = (): Office[] => {
   try {
     const raw = localStorage.getItem(OFFICES_KEY);
-    if (!raw) {
-      localStorage.setItem(OFFICES_KEY, JSON.stringify(INITIAL_OFFICES));
-      return INITIAL_OFFICES;
-    }
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error('Failed to load local offices:', err);
+    return raw ? JSON.parse(raw) : INITIAL_OFFICES;
+  } catch {
     return INITIAL_OFFICES;
   }
 };
@@ -212,6 +236,23 @@ export const saveLocalOffices = (offices: Office[]): void => {
     localStorage.setItem(OFFICES_KEY, JSON.stringify(offices));
   } catch (err) {
     console.error('Failed to save local offices:', err);
+  }
+};
+
+export const loadLocalFamilyMembers = (): FamilyMember[] => {
+  try {
+    const raw = localStorage.getItem(FAMILY_MEMBERS_KEY);
+    return raw ? JSON.parse(raw) : INITIAL_FAMILY_MEMBERS;
+  } catch {
+    return INITIAL_FAMILY_MEMBERS;
+  }
+};
+
+export const saveLocalFamilyMembers = (members: FamilyMember[]): void => {
+  try {
+    localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
+  } catch (err) {
+    console.error('Failed to save local family members:', err);
   }
 };
 
@@ -331,7 +372,7 @@ export const exportEntriesAsCSV = (entries: LedgerEntry[]): void => {
 
 export const exportTransactionsAsJSON = (transactions: Transaction[]): void => {
   const backup = {
-    version: '2.0',
+    version: '2.1',
     app: 'ExpenseTracker',
     exportDate: new Date().toISOString(),
     total: formatMoney(transactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0)),

@@ -15,8 +15,6 @@ import {
   ShieldCheck,
   Gift,
   CircleEllipsis,
-  House,
-  Car,
   Receipt,
   BedDouble,
   Ticket,
@@ -33,10 +31,20 @@ import {
   Award,
   Users,
   FileCheck,
-  UsersRound
+  UsersRound,
+  Tag,
+  House,
+  Car
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { ExpenseCategory, ExpenseSubcategory, ExpenseTarget, LedgerSource, PaymentType } from '../types';
+import type {
+  ExpenseCategory,
+  ExpenseSubcategory,
+  LedgerSource,
+  PaymentType,
+  Target,
+  TaxonomyOverrideDoc
+} from '../types';
 
 export interface CategoryMeta {
   id: string;
@@ -45,10 +53,12 @@ export interface CategoryMeta {
   color: string;
   hint: string;
   subcategories: ExpenseSubcategory[];
+  isCustom?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface TargetMeta {
-  id: ExpenseTarget;
+  id: Target;
   name: string;
   icon: LucideIcon;
   color: string;
@@ -56,9 +66,11 @@ export interface TargetMeta {
   badgeBorder: string;
   badgeText: string;
   description: string;
+  collectionName: string;
+  entityLabel: string;
 }
 
-export const TARGET_META: Record<ExpenseTarget, TargetMeta> = {
+export const TARGET_META: Record<Target, TargetMeta> = {
   Family: {
     id: 'Family',
     name: 'Family & Household',
@@ -67,7 +79,9 @@ export const TARGET_META: Record<ExpenseTarget, TargetMeta> = {
     badgeBg: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
     badgeBorder: 'border-emerald-200 dark:border-emerald-800/40',
     badgeText: 'text-emerald-600 dark:text-emerald-400',
-    description: 'Everyday household living, personal care, education & groceries'
+    description: 'Everyday household living, personal care, education & groceries',
+    collectionName: 'family',
+    entityLabel: 'Family Member'
   },
   Travel: {
     id: 'Travel',
@@ -77,7 +91,9 @@ export const TARGET_META: Record<ExpenseTarget, TargetMeta> = {
     badgeBg: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
     badgeBorder: 'border-sky-200 dark:border-sky-800/40',
     badgeText: 'text-sky-600 dark:text-sky-400',
-    description: 'Vacations, flights, lodging, tours & travel expenses'
+    description: 'Vacations, flights, lodging, tours & travel expenses',
+    collectionName: 'trips',
+    entityLabel: 'Trip'
   },
   Business: {
     id: 'Business',
@@ -87,7 +103,9 @@ export const TARGET_META: Record<ExpenseTarget, TargetMeta> = {
     badgeBg: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
     badgeBorder: 'border-indigo-200 dark:border-indigo-800/40',
     badgeText: 'text-indigo-600 dark:text-indigo-400',
-    description: 'Office supplies, technology, marketing, client meals & professional fees'
+    description: 'Office supplies, technology, marketing, client meals & professional fees',
+    collectionName: 'offices',
+    entityLabel: 'Office / Business'
   }
 };
 
@@ -397,20 +415,26 @@ export const BUSINESS_CATEGORIES: CategoryMeta[] = [
   }
 ];
 
-export const CATEGORIES_BY_TARGET: Record<ExpenseTarget, CategoryMeta[]> = {
+export const CATEGORIES_BY_TARGET: Record<Target, CategoryMeta[]> = {
   Family: FAMILY_CATEGORIES,
   Travel: TRAVEL_CATEGORIES,
   Business: BUSINESS_CATEGORIES
 };
 
-// Flattened list of all category metadata across all targets
+// Base taxonomy dictionary for Family, Travel, Business
+export const CATEGORY_TAXONOMY_BASE: Record<Target, Record<string, string[]>> = {
+  Family: Object.fromEntries(FAMILY_CATEGORIES.map(c => [c.id, c.subcategories])),
+  Travel: Object.fromEntries(TRAVEL_CATEGORIES.map(c => [c.id, c.subcategories])),
+  Business: Object.fromEntries(BUSINESS_CATEGORIES.map(c => [c.id, c.subcategories]))
+};
+
+// Flattened list of all built-in category metadata
 export const ALL_CATEGORIES: CategoryMeta[] = [
   ...FAMILY_CATEGORIES,
   ...TRAVEL_CATEGORIES,
   ...BUSINESS_CATEGORIES
 ];
 
-// Backward-compatible alias for existing imports
 export const CATEGORY_META = FAMILY_CATEGORIES;
 export const CATEGORIES: ExpenseCategory[] = Array.from(new Set(ALL_CATEGORIES.map(c => c.id as ExpenseCategory)));
 
@@ -423,21 +447,83 @@ const FALLBACK_META: CategoryMeta = {
   subcategories: []
 };
 
-export const getCategoryMeta = (categoryId: string, target?: ExpenseTarget): CategoryMeta => {
-  if (target && CATEGORIES_BY_TARGET[target]) {
-    const found = CATEGORIES_BY_TARGET[target].find(c => c.id.toLowerCase() === categoryId.toLowerCase() || c.name.toLowerCase() === categoryId.toLowerCase());
+/**
+ * Returns merged category taxonomy with custom overrides & soft-delete filtering.
+ */
+export const getEffectiveCategories = (
+  target: Target,
+  overrideDoc?: TaxonomyOverrideDoc
+): CategoryMeta[] => {
+  const baseList = CATEGORIES_BY_TARGET[target] || CATEGORIES_BY_TARGET.Family;
+  const override = overrideDoc?.[target];
+  if (!override) return baseList;
+
+  const deletedSet = new Set(override.deleted || []);
+  const customMap = override.categories || {};
+
+  const result: CategoryMeta[] = [];
+
+  // 1. Process base categories
+  for (const base of baseList) {
+    if (deletedSet.has(base.id)) continue;
+    const customSubs = customMap[base.id] || [];
+    const combinedSubs = Array.from(new Set([...base.subcategories, ...customSubs])).filter(
+      sub => !deletedSet.has(`${base.id}::${sub}`)
+    );
+    result.push({
+      ...base,
+      subcategories: combinedSubs
+    });
+  }
+
+  // 2. Process newly added custom categories
+  for (const [customName, customSubs] of Object.entries(customMap)) {
+    if (deletedSet.has(customName)) continue;
+    if (!result.some(c => c.id.toLowerCase() === customName.toLowerCase())) {
+      const activeSubs = customSubs.filter(sub => !deletedSet.has(`${customName}::${sub}`));
+      result.push({
+        id: customName,
+        name: customName,
+        icon: Tag,
+        color: '#6366f1',
+        hint: 'Custom household category',
+        subcategories: activeSubs,
+        isCustom: true
+      });
+    }
+  }
+
+  return result;
+};
+
+export const getCategoryMeta = (
+  categoryId: string,
+  target?: Target,
+  overrideDoc?: TaxonomyOverrideDoc
+): CategoryMeta => {
+  if (target) {
+    const effective = getEffectiveCategories(target, overrideDoc);
+    const found = effective.find(
+      c => c.id.toLowerCase() === categoryId.toLowerCase() || c.name.toLowerCase() === categoryId.toLowerCase()
+    );
     if (found) return found;
   }
-  const found = ALL_CATEGORIES.find(c => c.id.toLowerCase() === categoryId.toLowerCase() || c.name.toLowerCase() === categoryId.toLowerCase());
+  const found = ALL_CATEGORIES.find(
+    c => c.id.toLowerCase() === categoryId.toLowerCase() || c.name.toLowerCase() === categoryId.toLowerCase()
+  );
   return found || FALLBACK_META;
 };
 
-export const getSubcategoriesFor = (target: ExpenseTarget, categoryId: string): ExpenseSubcategory[] => {
-  const meta = getCategoryMeta(categoryId, target);
+export const getSubcategoriesFor = (
+  target: Target,
+  categoryId: string,
+  overrideDoc?: TaxonomyOverrideDoc
+): ExpenseSubcategory[] => {
+  const meta = getCategoryMeta(categoryId, target, overrideDoc);
   return meta.subcategories || [];
 };
 
-// Sibling apps and cross-app target metadata
+// Sibling apps and cross-app target metadata (HomeTracker / CarTracker)
 export const SOURCE_META: Record<LedgerSource, { icon: LucideIcon; color: string; label: string; app: string }> = {
   Expense: { icon: Receipt, color: '#4f46e5', label: 'Everyday', app: 'ExpenseTracker' },
   Home: { icon: House, color: '#10b981', label: 'Home', app: 'HomeTracker' },

@@ -145,6 +145,18 @@ ExpenseTracker supports 3 primary expense domains with dedicated category taxono
 
 ---
 
+## 🛠️ Taxonomy & Category Customization (`households/{code}/settings/taxonomy`)
+
+ExpenseTracker includes a full-featured **Domain, Entity & Taxonomy Manager** matching Statements PWA:
+
+- **Dynamic Category Creation**: Add custom categories under any Target (`Family`, `Travel`, `Business`) with custom subcategories.
+- **In-Place Renaming**: Rename built-in or custom categories and subcategories on the fly.
+- **Soft-Delete & Hide**: Hide unwanted categories or subcategories from pickers without losing historical transaction references.
+- **Instant Cloud & Local Sync**: Custom taxonomy changes are saved in Firestore at `households/{code}/settings/taxonomy` and instantly mirror into LocalStorage for full offline resilience.
+- **Entity CRUD Hub**: Dedicated manager for Trips, Offices, and Family Members.
+
+---
+
 ## ✨ Key Features
 
 - **⚡ Fast, Target-Aware Logging**:
@@ -156,7 +168,7 @@ ExpenseTracker supports 3 primary expense domains with dedicated category taxono
   - Connect household members with a code (`SMITH2026`).
   - Assign payer and audit tracking per transaction.
 - **📊 Real-time Analytics & Domain Slicing**:
-  - Filter entire Dashboard, Log, and Insights by Domain Target (`All`, `Family`, `Travel`, `Business`, `Home`, `Car`).
+  - Filter entire Dashboard, Log, and Insights by Domain Target (`All`, `Family`, `Travel`, `Business`).
   - 6-month spending trends, category distributions, merchant rankings, and member breakdown via Recharts.
 - **💳 Custom Payment Method Manager**:
   - Manage personal or shared cards (e.g., *Chase Sapphire*, *Venture X*, *Costco VISA*).
@@ -180,7 +192,7 @@ interface Transaction {
   paymentType: string;      // Payment method identifier
   user: string;             // Name of household member who paid
   isTaxDeductible?: boolean;// Optional tax deductible flag
-  target?: 'Family' | 'Travel' | 'Business' | 'Property' | 'Fleet';
+  target?: 'Family' | 'Travel' | 'Business';
   targetEntityId?: string;  // Trip ID or Office ID
   targetEntityLabel?: string;// Trip name or Office name
 }

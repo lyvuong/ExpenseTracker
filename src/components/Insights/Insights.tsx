@@ -42,8 +42,6 @@ const TARGET_COLORS: Record<string, string> = {
   Family: '#10b981',
   Travel: '#0ea5e9',
   Business: '#6366f1',
-  Property: '#14b8a6',
-  Fleet: '#f59e0b',
   Other: '#94a3b8'
 };
 
@@ -60,8 +58,6 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
     return entries.filter(e => {
       if (monthKey(e.date) !== month) return false;
       if (targetScope !== 'All') {
-        if (targetScope === 'Property' && e.source !== 'Home' && e.target !== 'Property') return false;
-        if (targetScope === 'Fleet' && e.source !== 'Car' && e.target !== 'Fleet') return false;
         if (targetScope === 'Travel' && e.target !== 'Travel') return false;
         if (targetScope === 'Business' && e.target !== 'Business') return false;
         if (targetScope === 'Family' && e.target !== 'Family') return false;
@@ -104,7 +100,7 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
 
       {/* Target Domain Scope Pills */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {(['All', 'Family', 'Travel', 'Business', 'Property', 'Fleet'] as (Target | 'All')[]).map(t => {
+        {(['All', 'Family', 'Travel', 'Business'] as (Target | 'All')[]).map(t => {
           const isActive = targetScope === t;
           return (
             <button

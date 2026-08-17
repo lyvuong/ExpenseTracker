@@ -9,6 +9,8 @@ import { Insights } from './components/Insights/Insights';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { PWAInstallPrompt } from './components/PWA/PWAInstallPrompt';
 import { LoginScreen } from './components/Auth/LoginScreen';
+import { TargetEntitiesModal } from './components/Settings/TargetEntitiesModal';
+import { PaymentTypesModal } from './components/Settings/PaymentTypesModal';
 
 import type {
   ActiveTab,
@@ -17,9 +19,13 @@ import type {
   AssociationTarget,
   ExpenseDraft,
   ExpenseTarget,
+  FamilyMember,
   LedgerEntry,
   Office,
   PaymentTypeItem,
+  TargetEntity,
+  TargetTaxonomyOverride,
+  TaxonomyOverrideDoc,
   Transaction,
   Trip,
   UserAuditInfo,
@@ -36,13 +42,17 @@ import {
   getStoredLastHomeId,
   getStoredLastVehicleId,
   importJSONBackup,
+  loadLocalFamilyMembers,
   loadLocalOffices,
   loadLocalPaymentTypes,
+  loadLocalTaxonomyOverride,
   loadLocalTransactions,
   loadLocalTrips,
   restoreSampleData,
+  saveLocalFamilyMembers,
   saveLocalOffices,
   saveLocalPaymentTypes,
+  saveLocalTaxonomyOverride,
   saveLocalTransactions,
   saveLocalTrips,
   setStoredFamilyCode,
@@ -54,6 +64,7 @@ import {
 import {
   createCarRecord,
   createHomeRecord,
+  deleteFirestoreEntity,
   deleteFirestorePaymentType,
   deleteFirestoreTransaction,
   getHomesOnce,
@@ -62,25 +73,30 @@ import {
   isFirebaseConfigured,
   loginWithGoogle,
   logoutFirebase,
+  saveFirestoreEntity,
   saveFirestoreOffice,
   saveFirestorePaymentType,
+  saveFirestoreTaxonomyOverride,
   saveFirestoreTransaction,
   saveFirestoreTrip,
   subscribeAuth,
+  subscribeFirestoreEntities,
   subscribeFirestoreOffices,
   subscribeFirestorePaymentTypes,
+  subscribeFirestoreTaxonomyOverride,
   subscribeFirestoreTransactions,
   subscribeFirestoreTrips,
   subscribeHouseholdMembers,
   verifyOrCreateHousehold
 } from './services/firebase';
-import { PaymentTypesModal } from './components/Settings/PaymentTypesModal';
 
 export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>(() => loadLocalTransactions());
   const [paymentTypes, setPaymentTypes] = useState<PaymentTypeItem[]>(() => loadLocalPaymentTypes());
   const [trips, setTrips] = useState<Trip[]>(() => loadLocalTrips());
   const [offices, setOffices] = useState<Office[]>(() => loadLocalOffices());
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>(() => loadLocalFamilyMembers());
+  const [taxonomyOverrideDoc, setTaxonomyOverrideDoc] = useState<TaxonomyOverrideDoc>(() => loadLocalTaxonomyOverride());
 
   const [familyCode, setFamilyCodeState] = useState<string>(() => getStoredFamilyCode());
   const [householdMembers, setHouseholdMembers] = useState<UserAuditInfo[]>([]);
@@ -95,6 +111,7 @@ export const App: React.FC = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isTaxonomyModalOpen, setIsTaxonomyModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<LedgerEntry | null>(null);
   const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
@@ -136,6 +153,8 @@ export const App: React.FC = () => {
     let unsubPaymentTypes: (() => void) | null = null;
     let unsubTrips: (() => void) | null = null;
     let unsubOffices: (() => void) | null = null;
+    let unsubFamilyMembers: (() => void) | null = null;
+    let unsubTaxonomy: (() => void) | null = null;
 
     const unsubscribeAuth = subscribeAuth((userProfile) => {
       setUser(userProfile);
@@ -144,10 +163,8 @@ export const App: React.FC = () => {
       unsubPaymentTypes?.();
       unsubTrips?.();
       unsubOffices?.();
-      unsubTransactions = null;
-      unsubPaymentTypes = null;
-      unsubTrips = null;
-      unsubOffices = null;
+      unsubFamilyMembers?.();
+      unsubTaxonomy?.();
 
       if (!userProfile) {
         setStoredFamilyCode('');
@@ -202,7 +219,7 @@ export const App: React.FC = () => {
         typesToSeed.forEach(pt => saveFirestorePaymentType(userProfile.uid, pt, familyCode));
       });
 
-      // 3. Trips subscription (shared with Statements)
+      // 3. Entity subscriptions (Trips, Offices, Family Members)
       unsubTrips = subscribeFirestoreTrips(userProfile.uid, familyCode, (cloudTrips) => {
         if (cloudTrips.length > 0) {
           setTrips(cloudTrips);
@@ -210,12 +227,24 @@ export const App: React.FC = () => {
         }
       });
 
-      // 4. Offices subscription (shared with Statements)
       unsubOffices = subscribeFirestoreOffices(userProfile.uid, familyCode, (cloudOffices) => {
         if (cloudOffices.length > 0) {
           setOffices(cloudOffices);
           saveLocalOffices(cloudOffices);
         }
+      });
+
+      unsubFamilyMembers = subscribeFirestoreEntities<FamilyMember>(userProfile.uid, familyCode, 'family', (items) => {
+        if (items.length > 0) {
+          setFamilyMembers(items);
+          saveLocalFamilyMembers(items);
+        }
+      });
+
+      // 4. Taxonomy Overrides subscription
+      unsubTaxonomy = subscribeFirestoreTaxonomyOverride(familyCode, (doc) => {
+        setTaxonomyOverrideDoc(doc);
+        saveLocalTaxonomyOverride(familyCode, doc);
       });
     });
 
@@ -224,6 +253,8 @@ export const App: React.FC = () => {
       unsubPaymentTypes?.();
       unsubTrips?.();
       unsubOffices?.();
+      unsubFamilyMembers?.();
+      unsubTaxonomy?.();
       unsubscribeAuth();
     };
   }, [familyCode]);
@@ -263,6 +294,10 @@ export const App: React.FC = () => {
   useEffect(() => {
     saveLocalOffices(offices);
   }, [offices]);
+
+  useEffect(() => {
+    saveLocalFamilyMembers(familyMembers);
+  }, [familyMembers]);
 
   const handleAddPaymentType = (name: string) => {
     const authUserName = user?.displayName || user?.email?.split('@')[0] || memberName;
@@ -315,6 +350,36 @@ export const App: React.FC = () => {
     }
   };
 
+  // Generic Entity Save / Delete (for TargetEntitiesModal)
+  const handleSaveEntity = async (collectionName: string, entity: TargetEntity) => {
+    if (collectionName === 'trips') handleSaveTrip(entity as Trip);
+    else if (collectionName === 'offices') handleSaveOffice(entity as Office);
+    else if (collectionName === 'family') {
+      setFamilyMembers(prev => [...prev.filter(m => m.id !== entity.id), entity as FamilyMember]);
+      if (user && isFirebaseActive) await saveFirestoreEntity(user.uid, 'family', entity, familyCode);
+    }
+  };
+
+  const handleDeleteEntity = async (collectionName: string, id: string) => {
+    if (collectionName === 'trips') setTrips(prev => prev.filter(t => t.id !== id));
+    else if (collectionName === 'offices') setOffices(prev => prev.filter(o => o.id !== id));
+    else if (collectionName === 'family') setFamilyMembers(prev => prev.filter(m => m.id !== id));
+
+    if (user && isFirebaseActive) {
+      await deleteFirestoreEntity(user.uid, collectionName, id, familyCode);
+    }
+  };
+
+  // Taxonomy Override Handler
+  const handleSaveTaxonomy = async (target: string, override: TargetTaxonomyOverride) => {
+    const updated = { ...taxonomyOverrideDoc, [target]: override };
+    setTaxonomyOverrideDoc(updated);
+    saveLocalTaxonomyOverride(familyCode, updated);
+    if (user && isFirebaseActive) {
+      await saveFirestoreTaxonomyOverride(user.uid, familyCode, target, override);
+    }
+  };
+
   const entries: LedgerEntry[] = useMemo(
     () => sortEntries(transactions.map(parseTransaction)),
     [transactions]
@@ -327,9 +392,10 @@ export const App: React.FC = () => {
 
   const memberNames = useMemo(() => {
     const fromHousehold = householdMembers.map(m => m.displayName);
+    const fromFamilyEntities = familyMembers.map(f => f.name);
     const fromEntries = entries.map(e => e.user).filter(Boolean);
-    return Array.from(new Set([...fromHousehold, ...fromEntries]));
-  }, [householdMembers, entries]);
+    return Array.from(new Set([...fromHousehold, ...fromFamilyEntities, ...fromEntries]));
+  }, [householdMembers, familyMembers, entries]);
 
   const handleSetFamilyCode = async (code: string): Promise<{ success: boolean; message: string }> => {
     const cleanCode = code.trim().toUpperCase();
@@ -499,6 +565,7 @@ export const App: React.FC = () => {
             entries={entries}
             memberName={memberName}
             familyCode={familyCode}
+            taxonomyOverrideDoc={taxonomyOverrideDoc}
             onQuickAdd={openNewExpense}
             onViewAll={() => setActiveTab('log')}
             onEditEntry={openEditExpense}
@@ -509,6 +576,7 @@ export const App: React.FC = () => {
         {activeTab === 'log' && (
           <ExpenseList
             entries={entries}
+            taxonomyOverrideDoc={taxonomyOverrideDoc}
             onAddExpense={openNewExpense}
             onEditEntry={openEditExpense}
             onViewEntry={setViewingEntry}
@@ -535,6 +603,7 @@ export const App: React.FC = () => {
             onClearDemoData={handleClearDemoData}
             onRestoreSampleData={handleRestoreSampleData}
             onManagePaymentTypes={() => setIsPaymentModalOpen(true)}
+            onManageTaxonomy={() => setIsTaxonomyModalOpen(true)}
           />
         )}
       </main>
@@ -561,6 +630,8 @@ export const App: React.FC = () => {
         offices={offices}
         onSaveTrip={handleSaveTrip}
         onSaveOffice={handleSaveOffice}
+        taxonomyOverrideDoc={taxonomyOverrideDoc}
+        onManageTaxonomy={() => setIsTaxonomyModalOpen(true)}
         vehicles={vehicles}
         homes={homes}
         defaultVehicleId={getStoredLastVehicleId()}
@@ -577,6 +648,18 @@ export const App: React.FC = () => {
         onAddPaymentType={handleAddPaymentType}
         onUpdatePaymentType={handleUpdatePaymentType}
         onDeletePaymentType={handleDeletePaymentType}
+      />
+
+      <TargetEntitiesModal
+        isOpen={isTaxonomyModalOpen}
+        onClose={() => setIsTaxonomyModalOpen(false)}
+        trips={trips}
+        offices={offices}
+        familyMembers={familyMembers}
+        onSaveEntity={handleSaveEntity}
+        onDeleteEntity={handleDeleteEntity}
+        taxonomyOverrideDoc={taxonomyOverrideDoc}
+        onSaveTaxonomy={handleSaveTaxonomy}
       />
 
       <EntryDetailSheet entry={viewingEntry} onClose={() => setViewingEntry(null)} />

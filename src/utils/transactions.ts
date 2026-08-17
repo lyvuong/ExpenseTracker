@@ -36,11 +36,11 @@ export const parseTransaction = (transaction: Transaction): LedgerEntry => {
   let detail = '';
 
   if (prefix === 'Home') {
-    target = 'Property';
+    target = 'Family';
     label = parts[1] || 'Home Project';
     detail = parts.slice(2).join(' · ');
   } else if (prefix === 'Car') {
-    target = 'Fleet';
+    target = 'Family';
     label = parts[1] || 'Auto Service';
     detail = parts.slice(2).join(' · ');
   } else if (prefix === 'Expense') {

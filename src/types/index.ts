@@ -9,13 +9,17 @@ export interface HouseholdMetadata {
   createdBy: UserAuditInfo;
   createdAt: string;
   members: UserAuditInfo[];
+  memberUids?: Record<string, boolean>;
 }
 
-export const TARGETS = ['Family', 'Travel', 'Business', 'Property', 'Fleet'] as const;
+export const TARGETS = ['Family', 'Travel', 'Business'] as const;
 export type Target = typeof TARGETS[number];
+export type ExpenseTarget = Target;
 
-// Main expense categorization targets that ExpenseTracker logs into
-export type ExpenseTarget = 'Family' | 'Travel' | 'Business';
+// ==========================================
+// Target Entity Collections
+// Shared with Statements PWA under households/{code}/{collectionName}
+// ==========================================
 
 export interface Trip {
   id: string;
@@ -33,6 +37,30 @@ export interface Office {
   officeType?: string; // Headquarters, Branch, Warehouse, Retail, Home Office, etc.
   notes?: string;
 }
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  height?: string;
+  weight?: string;
+  notes?: string;
+}
+
+export type TargetEntity = Trip | Office | FamilyMember;
+
+// ==========================================
+// Taxonomy Override (Custom Categories / Subcategories)
+// Stored at households/{code}/settings/taxonomy
+// ==========================================
+
+export interface TargetTaxonomyOverride {
+  /** Custom category→subcategory map (merged on top of built-in defaults) */
+  categories: Record<string, string[]>;
+  /** Soft-deleted keys: category names or "category::subcategory" pairs */
+  deleted: string[];
+}
+
+export type TaxonomyOverrideDoc = Partial<Record<string, TargetTaxonomyOverride>>;
 
 export type ExpenseCategory =
   | 'Grocery'
@@ -89,8 +117,7 @@ export type PaymentType = string;
 
 // Generic, app-agnostic ledger entry. This is the exact same collection
 // HomeTracker, AutoTrack, and Statements write to — users/{uid}/transactions or
-// households/{code}/transactions — so home, car, travel, business, and everyday household
-// spending coexist in one ledger.
+// households/{code}/transactions.
 export interface Transaction {
   id: string;
   date: string; // YYYY-MM-DD
@@ -98,7 +125,7 @@ export interface Transaction {
   amount: number;
   vendor: string; // store, restaurant or shop
   notes?: string;
-  category: string; // namespaced, e.g. "Expense - Family - Grocery - Supermarket" or "Expense - Travel - Lodging - Hotel/Resort"
+  category: string; // namespaced, e.g. "Expense - Family - Food & Groceries - Supermarket"
   paymentType: PaymentType;
   user: string; // household member who logged / paid
   isTaxDeductible?: boolean;
@@ -107,7 +134,7 @@ export interface Transaction {
   targetEntityLabel?: string;
 }
 
-// Which app or target owns a ledger entry, derived from its namespaced category.
+// Which app owns a ledger entry, derived from its namespaced category.
 export type LedgerSource = 'Expense' | 'Home' | 'Car' | 'Travel' | 'Business' | 'Other';
 
 // Read-side view of a Transaction with its category string parsed apart.
@@ -116,8 +143,8 @@ export interface LedgerEntry extends Transaction {
   target: Target;
   targetEntityId?: string;
   targetEntityLabel?: string;
-  label: string; // leaf category, e.g. "Grocery" or "Lodging"
-  detail: string; // subcategory or owning app's context, e.g. "Hotel/Resort" or "Main House"
+  label: string; // leaf category, e.g. "Food & Groceries" or "Lodging"
+  detail: string; // subcategory or owning app's context
   isEditable: boolean; // only Expense-owned entries may be edited here
 }
 
@@ -150,7 +177,7 @@ export interface ExpenseDraft {
   targetEntityId?: string;
   targetEntityLabel?: string;
   category: string;
-  subcategory: ExpenseSubcategory; // '' when the category has none or none was picked
+  subcategory: ExpenseSubcategory;
   paymentType: PaymentType;
   user: string;
   isTaxDeductible: boolean;

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, Trash2, Store, Settings2, Plane, Plus, Building2 } from 'lucide-react';
 import {
-  CATEGORIES_BY_TARGET,
   PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES,
   TARGET_META,
-  getCategoryMeta
+  getCategoryMeta,
+  getEffectiveCategories
 } from '../../constants/categories';
 import { toExpenseCategory, toExpenseSubcategory, todayISO, nowTime } from '../../utils/transactions';
 import type {
@@ -17,6 +17,7 @@ import type {
   Office,
   PaymentType,
   PaymentTypeItem,
+  TaxonomyOverrideDoc,
   Trip
 } from '../../types';
 
@@ -38,11 +39,12 @@ interface ExpenseFormModalProps {
   paymentTypes?: PaymentTypeItem[];
   /** Callback to open payment types management modal. */
   onManagePaymentTypes?: () => void;
-  /** Trips and Offices from the family/statements collections. */
   trips?: Trip[];
   offices?: Office[];
   onSaveTrip?: (trip: Trip) => Promise<void> | void;
   onSaveOffice?: (office: Office) => Promise<void> | void;
+  taxonomyOverrideDoc?: TaxonomyOverrideDoc;
+  onManageTaxonomy?: () => void;
   /** Vehicles/homes from sibling apps for the "move to" picker. */
   vehicles?: AssociableVehicle[];
   homes?: AssociableHome[];
@@ -90,6 +92,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   offices = [],
   onSaveTrip,
   onSaveOffice,
+  taxonomyOverrideDoc,
+  onManageTaxonomy,
   vehicles = [],
   homes = [],
   defaultVehicleId,
@@ -160,12 +164,12 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentCategories = CATEGORIES_BY_TARGET[draft.target] || CATEGORIES_BY_TARGET.Family;
-  const activeMeta = getCategoryMeta(draft.category, draft.target);
+  const currentCategories = getEffectiveCategories(draft.target, taxonomyOverrideDoc);
+  const activeMeta = getCategoryMeta(draft.category, draft.target, taxonomyOverrideDoc);
   const isRefund = amountText.trim().startsWith('-');
 
   const handleTargetChange = (newTarget: ExpenseTarget) => {
-    const targetCats = CATEGORIES_BY_TARGET[newTarget];
+    const targetCats = getEffectiveCategories(newTarget, taxonomyOverrideDoc);
     const defaultCat = targetCats[0]?.id || 'Other';
     setDraft(d => ({
       ...d,
@@ -435,7 +439,18 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
 
           {/* Category */}
           <div>
-            <span className="field-label">{draft.target} Category</span>
+            <div className="flex items-center justify-between mb-1">
+              <span className="field-label mb-0">{draft.target} Category</span>
+              {onManageTaxonomy && (
+                <button
+                  type="button"
+                  onClick={onManageTaxonomy}
+                  className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  <Settings2 className="w-3 h-3" /> Customize Taxonomy
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {currentCategories.map(({ id, name, icon: Icon, color }) => {
                 const isActive = draft.category.toLowerCase() === id.toLowerCase() || draft.category.toLowerCase() === name.toLowerCase();

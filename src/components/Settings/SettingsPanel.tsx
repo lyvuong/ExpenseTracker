@@ -11,7 +11,8 @@ import {
   Info,
   Check,
   CreditCard,
-  ChevronRight
+  ChevronRight,
+  Layers
 } from 'lucide-react';
 import type { LedgerEntry, Transaction, UserAuditInfo, UserProfile } from '../../types';
 
@@ -31,6 +32,7 @@ interface SettingsPanelProps {
   onClearDemoData: () => void;
   onRestoreSampleData: () => void;
   onManagePaymentTypes?: () => void;
+  onManageTaxonomy?: () => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -48,7 +50,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onImportJSON,
   onClearDemoData,
   onRestoreSampleData,
-  onManagePaymentTypes
+  onManagePaymentTypes,
+  onManageTaxonomy
 }) => {
   const [codeInput, setCodeInput] = useState(familyCode);
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -178,6 +181,28 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Domains, Entities & Taxonomy */}
+      <div className="card p-5">
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+          <Layers className="w-3.5 h-3.5" /> Domains, Entities & Category Taxonomy
+        </p>
+        <p className="text-xs text-slate-500 leading-relaxed mb-4">
+          Manage targets (Family, Travel, Business, Property, Fleet), create custom categories, add subcategories, and manage Trips or Offices.
+        </p>
+        <button
+          onClick={onManageTaxonomy}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 text-sm font-semibold text-slate-700 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-indigo-600" />
+            Manage Domains, Entities & Categories
+          </span>
+          <span className="flex items-center gap-1 text-xs text-indigo-600 font-bold">
+            Configure <ChevronRight className="w-4 h-4" />
+          </span>
+        </button>
       </div>
 
       {/* Payment Methods */}

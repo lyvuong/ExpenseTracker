@@ -1,22 +1,24 @@
 import React, { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Download, ReceiptText, UsersRound, Plane, Briefcase, House, Car } from 'lucide-react';
+import { Search, SlidersHorizontal, Download, ReceiptText, UsersRound, Plane, Briefcase } from 'lucide-react';
 import { EntryRow } from './EntryRow';
-import { ALL_CATEGORIES, CATEGORIES_BY_TARGET, getSubcategoriesFor } from '../../constants/categories';
+import { getEffectiveCategories, getSubcategoriesFor } from '../../constants/categories';
 import { currentYearKey, formatDayLabel, formatMoney, yearKey } from '../../utils/transactions';
-import type { ExpenseTarget, LedgerEntry, Target } from '../../types';
+import type { ExpenseTarget, LedgerEntry, Target, TaxonomyOverrideDoc } from '../../types';
 
 interface ExpenseListProps {
   entries: LedgerEntry[];
+  taxonomyOverrideDoc?: TaxonomyOverrideDoc;
   onAddExpense: (target?: ExpenseTarget) => void;
   onEditEntry: (entry: LedgerEntry) => void;
   onViewEntry: (entry: LedgerEntry) => void;
   onExportCSV: (entries: LedgerEntry[]) => void;
 }
 
-const TARGET_FILTERS: (Target | 'All')[] = ['All', 'Family', 'Travel', 'Business', 'Property', 'Fleet'];
+const TARGET_FILTERS: (Target | 'All')[] = ['All', 'Family', 'Travel', 'Business'];
 
 export const ExpenseList: React.FC<ExpenseListProps> = ({
   entries,
+  taxonomyOverrideDoc,
   onAddExpense,
   onEditEntry,
   onViewEntry,
@@ -59,17 +61,19 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   );
 
   const availableCategories = useMemo(() => {
-    if (targetFilter === 'Family') return CATEGORIES_BY_TARGET.Family.map(c => c.id);
-    if (targetFilter === 'Travel') return CATEGORIES_BY_TARGET.Travel.map(c => c.id);
-    if (targetFilter === 'Business') return CATEGORIES_BY_TARGET.Business.map(c => c.id);
-    return Array.from(new Set(ALL_CATEGORIES.map(c => c.id)));
-  }, [targetFilter]);
+    if (targetFilter !== 'All') {
+      return getEffectiveCategories(targetFilter, taxonomyOverrideDoc).map(c => c.id);
+    }
+    const targets: Target[] = ['Family', 'Travel', 'Business'];
+    const all = targets.flatMap(t => getEffectiveCategories(t, taxonomyOverrideDoc).map(c => c.id));
+    return Array.from(new Set(all));
+  }, [targetFilter, taxonomyOverrideDoc]);
 
   const availableSubcategories = useMemo(() => {
     if (category === 'all') return [];
     const target = (targetFilter === 'Travel' ? 'Travel' : targetFilter === 'Business' ? 'Business' : 'Family') as ExpenseTarget;
-    return getSubcategoriesFor(target, category);
-  }, [category, targetFilter]);
+    return getSubcategoriesFor(target, category, taxonomyOverrideDoc);
+  }, [category, targetFilter, taxonomyOverrideDoc]);
 
   const selectCategory = (next: string) => {
     setCategory(next);
@@ -80,8 +84,6 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
     const term = search.trim().toLowerCase();
     return entries.filter(e => {
       if (targetFilter !== 'All') {
-        if (targetFilter === 'Property' && e.source !== 'Home' && e.target !== 'Property') return false;
-        if (targetFilter === 'Fleet' && e.source !== 'Car' && e.target !== 'Fleet') return false;
         if (targetFilter === 'Travel' && e.target !== 'Travel') return false;
         if (targetFilter === 'Business' && e.target !== 'Business') return false;
         if (targetFilter === 'Family' && e.target !== 'Family') return false;
@@ -141,8 +143,6 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
               {t === 'Family' && <UsersRound className="w-3 h-3 text-emerald-500" />}
               {t === 'Travel' && <Plane className="w-3 h-3 text-sky-500" />}
               {t === 'Business' && <Briefcase className="w-3 h-3 text-indigo-500" />}
-              {t === 'Property' && <House className="w-3 h-3 text-emerald-600" />}
-              {t === 'Fleet' && <Car className="w-3 h-3 text-amber-500" />}
               <span>{t === 'All' ? 'All Domains' : t}</span>
             </button>
           );

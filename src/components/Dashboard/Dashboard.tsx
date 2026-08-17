@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowRight, TrendingDown, TrendingUp, Plus, Users } from 'lucide-react';
 import { EntryRow } from '../Expenses/EntryRow';
-import { CATEGORIES_BY_TARGET, getCategoryMeta } from '../../constants/categories';
+import { getCategoryMeta, getEffectiveCategories } from '../../constants/categories';
 import { currentMonthKey, formatMoney, monthKey, monthLabel, recentMonthKeys, todayISO } from '../../utils/transactions';
-import type { ExpenseTarget, LedgerEntry } from '../../types';
+import type { ExpenseTarget, LedgerEntry, TaxonomyOverrideDoc } from '../../types';
 
 interface DashboardProps {
   entries: LedgerEntry[];
   memberName: string;
   familyCode: string;
+  taxonomyOverrideDoc?: TaxonomyOverrideDoc;
   onQuickAdd: (category?: string, target?: ExpenseTarget) => void;
   onViewAll: () => void;
   onEditEntry: (entry: LedgerEntry) => void;
@@ -19,6 +20,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   entries,
   memberName,
   familyCode,
+  taxonomyOverrideDoc,
   onQuickAdd,
   onViewAll,
   onEditEntry,
@@ -69,8 +71,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const isUp = delta > 0;
   const recent = entries.slice(0, 6);
   const maxCategory = stats.topCategories[0]?.[1] || 1;
-
-  const quickCategories = CATEGORIES_BY_TARGET[selectedTarget].slice(0, 4);
 
   return (
     <section className="space-y-4">
@@ -148,15 +148,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
             })}
           </div>
         </div>
-
-        <div className="grid grid-cols-4 gap-2">
-          {quickCategories.map(cat => {
+          {/* Quick add category chips for selected target */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {getEffectiveCategories(selectedTarget, taxonomyOverrideDoc).slice(0, 8).map(cat => {
             const Icon = cat.icon;
             return (
               <button
                 key={cat.id}
                 onClick={() => onQuickAdd(cat.id, selectedTarget)}
-                className="flex flex-col items-center gap-1.5 px-1 py-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors"
+                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 transition-all text-left"
               >
                 <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${cat.color}1a` }}>
                   <Icon className="w-4.5 h-4.5" style={{ color: cat.color }} />

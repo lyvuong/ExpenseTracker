@@ -28,6 +28,8 @@ import type {
   LedgerEntry,
   Office,
   PaymentTypeItem,
+  TargetTaxonomyOverride,
+  TaxonomyOverrideDoc,
   Transaction,
   Trip,
   UserAuditInfo,
@@ -37,7 +39,9 @@ import {
   getStoredFirebaseConfig,
   setStoredFirebaseConfig,
   getStoredFamilyCode,
-  setStoredFamilyCode
+  setStoredFamilyCode,
+  saveLocalTaxonomyOverride,
+  loadLocalTaxonomyOverride
 } from './storage';
 
 let app: FirebaseApp | null = null;
@@ -184,95 +188,122 @@ export const deleteFirestoreTransaction = async (
 };
 
 // ==========================================
-// Target Entity Collections (Trips & Offices)
-// Shared with Statements PWA: households/{code}/trips and households/{code}/offices
+// Target Entity Collections (Trips, Offices, Family, Properties, Vehicles)
+// Shared with Statements PWA: households/{code}/{collectionName}
 // ==========================================
 
-export const subscribeFirestoreTrips = (
+export const subscribeFirestoreEntities = <T extends { id: string }>(
   userId: string,
   familyCode: string | undefined,
-  callback: (trips: Trip[]) => void
+  collectionName: string,
+  callback: (items: T[]) => void
 ) => {
   if (!db) return () => {};
   const target = getStorageTarget(userId, familyCode);
-  const colRef = collection(db, target.root, target.id, 'trips');
+  const colRef = collection(db, target.root, target.id, collectionName);
   return onSnapshot(colRef, (snapshot) => {
-    callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Trip)));
+    callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as T)));
   }, (error) => {
-    console.error('[Firestore] Trips sync error:', error);
+    console.error(`[Firestore] ${collectionName} sync error:`, error);
   });
 };
 
-export const saveFirestoreTrip = async (
+export const saveFirestoreEntity = async <T extends { id: string }>(
   userId: string,
-  trip: Trip,
+  collectionName: string,
+  entity: T,
   familyCode?: string
 ): Promise<void> => {
   if (!db) return;
   try {
     const target = getStorageTarget(userId, familyCode);
-    const clean = JSON.parse(JSON.stringify(trip));
-    await setDoc(doc(db, target.root, target.id, 'trips', trip.id), clean, { merge: true });
+    const clean = JSON.parse(JSON.stringify(entity));
+    await setDoc(doc(db, target.root, target.id, collectionName, entity.id), clean, { merge: true });
   } catch (err) {
-    console.error('[Firestore] Error saving trip:', err);
+    console.error(`[Firestore] Error saving ${collectionName}:`, err);
   }
 };
 
-export const deleteFirestoreTrip = async (
+export const deleteFirestoreEntity = async (
   userId: string,
-  tripId: string,
+  collectionName: string,
+  id: string,
   familyCode?: string
 ): Promise<void> => {
   if (!db) return;
   try {
     const target = getStorageTarget(userId, familyCode);
-    await deleteDoc(doc(db, target.root, target.id, 'trips', tripId));
+    await deleteDoc(doc(db, target.root, target.id, collectionName, id));
   } catch (err) {
-    console.error('[Firestore] Error deleting trip:', err);
+    console.error(`[Firestore] Error deleting ${collectionName}:`, err);
   }
 };
 
-export const subscribeFirestoreOffices = (
-  userId: string,
-  familyCode: string | undefined,
-  callback: (offices: Office[]) => void
+// Specific helper aliases for backwards compatibility
+export const subscribeFirestoreTrips = (userId: string, familyCode: string | undefined, cb: (trips: Trip[]) => void) =>
+  subscribeFirestoreEntities<Trip>(userId, familyCode, 'trips', cb);
+
+export const saveFirestoreTrip = (userId: string, trip: Trip, familyCode?: string) =>
+  saveFirestoreEntity(userId, 'trips', trip, familyCode);
+
+export const deleteFirestoreTrip = (userId: string, tripId: string, familyCode?: string) =>
+  deleteFirestoreEntity(userId, 'trips', tripId, familyCode);
+
+export const subscribeFirestoreOffices = (userId: string, familyCode: string | undefined, cb: (offices: Office[]) => void) =>
+  subscribeFirestoreEntities<Office>(userId, familyCode, 'offices', cb);
+
+export const saveFirestoreOffice = (userId: string, office: Office, familyCode?: string) =>
+  saveFirestoreEntity(userId, 'offices', office, familyCode);
+
+export const deleteFirestoreOffice = (userId: string, officeId: string, familyCode?: string) =>
+  deleteFirestoreEntity(userId, 'offices', officeId, familyCode);
+
+// ==========================================
+// Taxonomy Override (Custom Categories & Subcategories)
+// Stored at: households/{familyCode}/settings/taxonomy
+// Shape: { [target]: { categories: Record<string, string[]>, deleted: string[] } }
+// ==========================================
+
+export const subscribeFirestoreTaxonomyOverride = (
+  familyCode: string,
+  callback: (data: TaxonomyOverrideDoc) => void
 ) => {
-  if (!db) return () => {};
-  const target = getStorageTarget(userId, familyCode);
-  const colRef = collection(db, target.root, target.id, 'offices');
-  return onSnapshot(colRef, (snapshot) => {
-    callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Office)));
-  }, (error) => {
-    console.error('[Firestore] Offices sync error:', error);
+  if (!db || !familyCode) {
+    callback(loadLocalTaxonomyOverride(familyCode));
+    return () => {};
+  }
+  const ref = doc(db, 'households', familyCode.trim().toUpperCase(), 'settings', 'taxonomy');
+  return onSnapshot(ref, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data() as TaxonomyOverrideDoc;
+      saveLocalTaxonomyOverride(familyCode, data);
+      callback(data);
+    } else {
+      callback(loadLocalTaxonomyOverride(familyCode));
+    }
+  }, (err) => {
+    console.warn('[Firestore] Taxonomy override sync error:', err);
+    callback(loadLocalTaxonomyOverride(familyCode));
   });
 };
 
-export const saveFirestoreOffice = async (
-  userId: string,
-  office: Office,
-  familyCode?: string
+export const saveFirestoreTaxonomyOverride = async (
+  _userId: string,
+  familyCode: string | undefined,
+  target: string,
+  override: TargetTaxonomyOverride
 ): Promise<void> => {
-  if (!db) return;
-  try {
-    const target = getStorageTarget(userId, familyCode);
-    const clean = JSON.parse(JSON.stringify(office));
-    await setDoc(doc(db, target.root, target.id, 'offices', office.id), clean, { merge: true });
-  } catch (err) {
-    console.error('[Firestore] Error saving office:', err);
-  }
-};
+  const code = (familyCode || getStoredFamilyCode() || '').trim().toUpperCase();
+  const current = loadLocalTaxonomyOverride(code);
+  const updated: TaxonomyOverrideDoc = { ...current, [target]: override };
+  saveLocalTaxonomyOverride(code, updated);
 
-export const deleteFirestoreOffice = async (
-  userId: string,
-  officeId: string,
-  familyCode?: string
-): Promise<void> => {
-  if (!db) return;
+  if (!db || !code) return;
   try {
-    const target = getStorageTarget(userId, familyCode);
-    await deleteDoc(doc(db, target.root, target.id, 'offices', officeId));
+    const ref = doc(db, 'households', code, 'settings', 'taxonomy');
+    await setDoc(ref, { [target]: JSON.parse(JSON.stringify(override)) }, { merge: true });
   } catch (err) {
-    console.error('[Firestore] Error deleting office:', err);
+    console.error('[Firestore] Error saving taxonomy override:', err);
   }
 };
 
