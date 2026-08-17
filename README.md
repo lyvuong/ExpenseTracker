@@ -4,9 +4,9 @@
 
 ![ExpenseTracker Banner](public/favicon.svg)
 
-### Everyday Household Expense Logging & Family Ledger PWA
+### Multi-Domain Household, Travel & Business Expense Tracking PWA
 
-A fast, offline-capable Progressive Web App built to log everyday household spending — groceries, dining, travel, supplies, medical, and entertainment. Built as a sibling application to **HomeTracker** and **AutoTrack**, writing directly to a unified Firestore ledger so your household sees all expenses in one place.
+A fast, offline-capable Progressive Web App built to log everyday household spending, vacation & trip costs, and business/office operations. Built as a sibling application to **HomeTracker**, **AutoTrack**, and **Statements PWA**, writing directly to a unified Firestore ledger with seamless cross-app entity linking (`trips`, `offices`, `vehicles`, `houses`).
 
 <br/>
 
@@ -26,9 +26,11 @@ A fast, offline-capable Progressive Web App built to log everyday household spen
 ## 📑 Table of Contents
 
 - [Overview & Architecture](#-overview--architecture)
+- [Target Domains (Family, Travel, Business)](#-target-domains)
+- [Category Taxonomies & Subcategories](#-category-taxonomies--subcategories)
+- [Entity Linking (Trips & Offices)](#-entity-linking-trips--offices)
 - [Key Features](#-key-features)
 - [Data Model & Ledger Schema](#-data-model--ledger-schema)
-- [Category Hierarchy & Taxonomy](#-category-hierarchy--taxonomy)
 - [Household Sharing & Multi-User Sync](#-household-sharing--multi-user-sync)
 - [Ecosystem & Sibling Apps](#-ecosystem--sibling-apps)
 - [Tech Stack](#-tech-stack)
@@ -43,13 +45,14 @@ A fast, offline-capable Progressive Web App built to log everyday household spen
 
 ## 🏛️ Overview & Architecture
 
-**ExpenseTracker** is engineered as part of a family tracker ecosystem. Rather than maintaining isolated silos for different kinds of expenses, all three applications share the exact same Firestore collection path:
+**ExpenseTracker** is engineered as the primary expense logging hub of a family tracker ecosystem. All sibling applications share the exact same Firestore collection paths (`users/{uid}/transactions` or `households/{code}/transactions`):
 
 ```text
 Family Ledger Ecosystem
-├── 🚗 AutoTrack (Port 3000)     → Vehicle maintenance & repairs → "Car - {service} - {year} - {make} {model}"
-├── 🏠 HomeTracker (Port 3001)   → Home projects & utilities     → "Home - {category} - {home}"
-└── 💳 ExpenseTracker (Port 3004) → Everyday household spending   → "Expense - {category} [- {subcategory}]"
+├── 🚗 AutoTrack (Port 3000)     → Vehicle fleet & maintenance  → "Car - {service} - {year} - {make} {model}"
+├── 🏠 HomeTracker (Port 3001)   → Home properties & utilities  → "Home - {category} - {home}"
+├── 💳 ExpenseTracker (Port 3004) → Family, Travel & Business   → "Expense - {Target} - {Category} - {Subcategory}"
+└── 📊 Statements PWA (Port 3000)→ Bank CSV parser & audit     → Target entities: Properties, Vehicles, Trips, Offices
 ```
 
 ```text
@@ -59,54 +62,111 @@ Family Ledger Ecosystem
                                │  households/{code}/transactions (Shared Mode)  │
                                └───────────────────────┬────────────────────────┘
                                                        │
-                   ┌───────────────────────────────────┼───────────────────────────────────┐
-                   ▼                                   ▼                                   ▼
-         ┌───────────────────┐               ┌───────────────────┐               ┌───────────────────┐
-         │     AutoTrack     │               │    HomeTracker    │               │  ExpenseTracker   │
-         │  (Car Maintenance)│               │  (Home & Property)│               │ (Everyday Expense)│
-         └───────────────────┘               └───────────────────┘               └───────────────────┘
+         ┌─────────────────────┬───────────────────────┼───────────────────────┬─────────────────────┐
+         ▼                     ▼                       ▼                       ▼                     ▼
+┌───────────────────┐ ┌─────────────────┐ ┌─────────────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│     AutoTrack     │ │   HomeTracker   │ │     ExpenseTracker      │ │   Statements    │ │ Target Entities │
+│ (Car Maintenance) │ │(Home & Property)│ │(Family, Travel, Business│ │  (Bank Parsing) │ │(Trips, Offices) │
+└───────────────────┘ └─────────────────┘ └─────────────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
 > [!NOTE]
-> **Unified Read-Side, Guarded Write-Side**: Entries created by HomeTracker or AutoTrack render seamlessly in ExpenseTracker with source tags (`Home`, `Car`) and are read-only here. Expense-owned records can be edited, updated, or removed directly within ExpenseTracker.
+> **Unified Read-Side, Guarded Write-Side**: Entries created across sibling apps render seamlessly in ExpenseTracker with source tags (`Home`, `Car`, `Travel`, `Business`) and domain badges. Expense-owned records can be edited and linked directly in ExpenseTracker.
+
+---
+
+## 🎯 Target Domains
+
+ExpenseTracker supports 3 primary expense domains with dedicated category taxonomies and real-world entity associations:
+
+1. **👨‍👩‍👧‍👦 Family & Household**: Everyday groceries, living expenses, personal care, education, childcare, subscriptions, taxes, and income.
+2. **✈️ Travel & Trips**: Flights, lodging, car rentals, excursions, dining while traveling, luggage, and travel services — linkable to active **Trips** (e.g., *"Summer in Tokyo"*).
+3. **💼 Business & Office**: Office supplies, dev tools & AI software, marketing, professional legal/accounting services, client meals, taxes, licenses, and payroll — linkable to **Offices / Business entities** with automated tax-deductible flags.
+
+---
+
+## 🏷️ Category Taxonomies & Subcategories
+
+### ✈️ Travel Taxonomy
+| Category | Subcategories |
+| :--- | :--- |
+| **Transportation** | Flights · Trains & Buses · Rental Car · Rideshare & Taxi · Public Transit · Ferries · Cruise · Parking |
+| **Lodging** | Hotel/Resort · Vacation Rental · Resort Fees |
+| **Food & Dining** | Restaurants · Cafes & Coffee · Room Service · Groceries While Traveling · Snacks |
+| **Activities & Entertainment** | Tours & Excursions · Attraction Tickets · Events & Shows |
+| **Technology** | Travel Adapters & Chargers · Portable Wi-Fi & SIM Cards · Camera & Gear Rentals · Device Repairs · Travel Apps & Software |
+| **Shopping** | Souvenirs & Gifts · Duty-Free Shopping · Local Crafts & Goods · Travel Gear & Luggage · Clothing While Traveling |
+| **Travel Services & Fees** | Travel Insurance · Visa & Passport Fees · Baggage Fees · Currency Exchange · Travel Agent Fees |
+
+### 👨‍👩‍👧‍👦 Family & Household Taxonomy
+| Category | Subcategories |
+| :--- | :--- |
+| **Food & Groceries** | Groceries · Supermarket · Restaurants · Coffee Shops · Takeout & Delivery · Alcohol & Bars · Bakery & Snacks |
+| **Health & Wellness** | Doctor Visits · Dental Care · Vision Care · Pharmacy & Prescriptions · Gym & Fitness · Therapy & Counseling |
+| **Personal Care** | Haircuts & Salon · Spa & Massage · Cosmetics & Toiletries · Nails |
+| **Shopping** | Clothing & Apparel · Shoes & Footwear · Accessories & Jewelry · Electronics & Gadgets · Home & Furniture · General Merchandise |
+| **Digital & Tech** | Domains & Hosting · Software & Apps · AI & Dev Tools · Cloud & Storage · Online Services · Devices & Accessories |
+| **Entertainment & Leisure** | Movies & Streaming · Concerts & Events · Hobbies · Books & Magazines · Video Games · Sports & Recreation |
+| **Education** | Tuition · Student Loans · Books & Supplies · Courses & Certifications · School Fees · Tutoring |
+| **Family & Childcare** | Childcare & Daycare · Kids Activities · School & Camps · Toys & Gear · Elder Care |
+| **Pets** | Food & Treats · Vet & Healthcare · Grooming · Pet Supplies · Boarding & Sitting · Medication |
+| **Household Supplies** | Cleaning · Paper Goods · Kitchen · Laundry · Storage & Organization · Tools & Hardware |
+| **Subscriptions & Memberships** | Streaming & Media · Music & Audio · Cloud Storage & Software · News & Publications · Gym & Fitness Memberships · Warehouse & Retail Clubs · Meal Kits & Food Delivery · Gaming Subscriptions |
+| **Personal Finance** | Bank & ATM Fees · Life Insurance · Credit Card Payment · Transfer · Investment & Savings |
+| **Gifts & Donations** | Gifts · Charitable Donations · Religious Contributions · Cards & Wrapping |
+| **Taxes** | Federal Income Tax · State Income Tax · Estimated Tax Payments · Tax Preparation Fees · IRS Penalties & Interest · Local & City Tax |
+| **Income & Refunds** | Salary & Wages · Bonus & Commission · Freelance & Side Income · Investment & Dividends · Rental Income · Tax Refund · Reimbursement · Gifts Received |
+| **Insurance** | Health · Dental & Vision · Life · Disability · Umbrella |
+| **Other** | Fees & Charges · Cash Withdrawal · Reimbursable · Miscellaneous |
+
+### 💼 Business Taxonomy
+| Category | Subcategories |
+| :--- | :--- |
+| **Office & Supplies** | Office Supplies · Equipment & Hardware · Software & Subscriptions · Printing & Postage · Furniture & Fixtures |
+| **Technology & IT** | Computers & Devices · Cloud & Hosting · SaaS & Software Licenses · IT Support & Repairs · Domain & DNS · Data & Cybersecurity |
+| **Marketing & Advertising** | Online Advertising · Print Marketing · Website & Hosting · Social Media Tools · Signage & Photography · Staging & Promotional |
+| **Professional Services** | Legal Fees · Accounting & Bookkeeping · Consulting Fees · Bank & Merchant Fees |
+| **Travel & Meals** | Business Travel · Client Meals · Conferences & Events · Lodging & Transport |
+| **Dues & Subscriptions** | MLS Dues & Fees · Realtor / Trade Association Dues · Industry Subscriptions · Professional Memberships · Board Dues |
+| **Professional Development** | Continuing Education (CE) · Professional Licensing · Certifications & Exams · Seminars & Workshops · Training & Coaching |
+| **Commissions & Fees** | Broker Commission Split · Broker Desk Fees · Brokerage Admin Fees · Referral & Finder Fees · Closing & Transaction Fees |
+| **Taxes & Licenses** | Business Taxes · Licenses & Permits · Business Insurance |
+| **Payroll & Contractors** | Employee Payroll · Contractor Payments · Employee Benefits |
+| **Business Income** | Client Payments · Product Sales · Interest Income · Refunds & Reimbursements · Loans & Financing · Grants & Subsidies · Owner Contribution |
+| **Other Business** | Bank Charges · Miscellaneous Expense |
+
+---
+
+## 🔗 Entity Linking (Trips & Offices)
+
+- **Trips (`households/{code}/trips`)**: Logged travel costs can be attached to any active Trip entity, storing `targetEntityId` and `targetEntityLabel` directly on the transaction. You can select existing trips or create a new trip on the fly.
+- **Offices & Businesses (`households/{code}/offices`)**: Business purchases and tech subscriptions can be linked to a specific Office or LLC entity. Selecting Business automatically defaults `isTaxDeductible` to `true`.
+- **Vehicle & Home Associations**: Seamlessly transfer or associate entries with CarTracker vehicles (`households/{code}/vehicles`) or HomeTracker houses (`households/{code}/houses`).
 
 ---
 
 ## ✨ Key Features
 
-- **⚡ Fast, Streamlined Logging**:
-  - Pre-populated quick-add tiles for frequent expenses.
-  - Vendor autocomplete dynamically inferred from past transactions.
-  - Subcategory chip selector that expands on demand.
-  - Smart default date and current time stamps.
+- **⚡ Fast, Target-Aware Logging**:
+  - Top-level Domain Switcher pills (`Family`, `Travel`, `Business`).
+  - Dynamic category & subcategory chip selectors.
+  - Autocomplete for frequent vendors and merchants.
+  - Smart timestamps and negative amount toggle for refunds / reimbursements.
 - **👥 Household Multi-User Sync**:
-  - Connect multiple household members using a simple household code (e.g., `SMITH2026`).
-  - Assign who paid for each expense with audit tracking.
-  - Switch between personal ledger mode (`users/{uid}`) and shared household mode (`households/{code}`).
-- **📊 Real-time Analytics & Visual Insights**:
-  - 6-month spending trend graphs with interactive monthly breakdowns.
-  - Category and subcategory distribution charts powered by Recharts.
-  - Top vendor rankings and member-by-member payment allocation.
-  - Monthly navigation with instant recalculations.
-- **💳 Custom Payment Method Management**:
-  - Built-in system payment methods (Credit Card, Debit Card, Cash, Bank Transfer, Check, Other).
-  - Add custom personal or shared household payment types (e.g., *Chase Sapphire*, *Joint Checking*).
-- **📝 Tax & Notes Support**:
-  - Mark entries as tax-deductible for tax season filtering and export.
-  - Add structured notes to any transaction.
+  - Connect household members with a code (`SMITH2026`).
+  - Assign payer and audit tracking per transaction.
+- **📊 Real-time Analytics & Domain Slicing**:
+  - Filter entire Dashboard, Log, and Insights by Domain Target (`All`, `Family`, `Travel`, `Business`, `Home`, `Car`).
+  - 6-month spending trends, category distributions, merchant rankings, and member breakdown via Recharts.
+- **💳 Custom Payment Method Manager**:
+  - Manage personal or shared cards (e.g., *Chase Sapphire*, *Venture X*, *Costco VISA*).
 - **📱 Offline-First Progressive Web App (PWA)**:
-  - Custom service worker (`sw.js`) for instant app shell caching and offline resilience.
-  - LocalStorage mirror to guarantee data availability with or without network connection.
-  - Native-like install prompt for Android, iOS, macOS, and Windows home screens.
-- **🎨 Modern Responsive UI**:
-  - Mobile-first layout with smooth tab navigation, sliding bottom sheets, and responsive desktop grid views.
-  - Clean Tailwind CSS v4 styling with accessible contrast and micro-animations.
+  - Custom service worker (`sw.js`) and local storage mirror for zero-latency offline operation.
+  - Installable on iOS, Android, macOS, and Windows.
 
 ---
 
 ## 🗄️ Data Model & Ledger Schema
-
-Every expense document is saved directly in the shared `transactions` subcollection:
 
 ```typescript
 interface Transaction {
@@ -116,142 +176,44 @@ interface Transaction {
   amount: number;           // Dollar amount (e.g. 42.50)
   vendor: string;           // Store, restaurant, merchant, or service provider
   notes?: string;           // Optional notes / descriptions
-  category: string;         // Namespaced category string, e.g. "Expense - Grocery - Supermarket"
+  category: string;         // Namespaced string: "Expense - Travel - Lodging - Hotel/Resort"
   paymentType: string;      // Payment method identifier
-  user: string;             // Name or display name of the household member who paid
+  user: string;             // Name of household member who paid
   isTaxDeductible?: boolean;// Optional tax deductible flag
+  target?: 'Family' | 'Travel' | 'Business' | 'Property' | 'Fleet';
+  targetEntityId?: string;  // Trip ID or Office ID
+  targetEntityLabel?: string;// Trip name or Office name
 }
 ```
-
-### Household Metadata Schema (`households/{code}/metadata/info`)
-
-```typescript
-interface HouseholdMetadata {
-  code: string;             // Household code (e.g. "FAMILY2026")
-  createdAt: string;        // Timestamp
-  createdBy: UserAuditInfo; // Owner metadata
-  members: UserAuditInfo[]; // List of authorized household members
-}
-```
-
----
-
-## 🏷️ Category Hierarchy & Taxonomy
-
-Categories are stored namespaced as `Expense - {Category} - {Subcategory}`. This format allows the shared ledger to retain strict backward and cross-app compatibility without requiring schema migrations.
-
-| Category | Subcategories |
-| :--- | :--- |
-| **Grocery** | Supermarket · Warehouse Club · Produce & Market · Meat & Seafood · Bakery · Beverages |
-| **Food & Dining** | Restaurant · Takeout & Delivery · Coffee & Tea · Fast Food · Bar & Drinks · Dessert & Snacks |
-| **Travel** | Flights · Lodging · Car Rental · Activities & Tours · Travel Food · Fees & Baggage |
-| **Transportation** | Fuel · Public Transit · Rideshare & Taxi · Parking · Tolls |
-| **Household Supplies** | Cleaning · Paper Goods · Kitchen · Laundry · Storage & Organization · Tools & Hardware |
-| **Health & Medical** | Doctor Visit · Dental · Vision · Pharmacy · Therapy & Mental Health · Lab & Imaging |
-| **Shopping** | Clothing · Shoes & Accessories · Electronics · Home & Furniture · Books & Media · Sporting Goods |
-| **Digital & Tech** | Domains & Hosting · Software & Apps · AI & Dev Tools · Cloud & Storage · Online Services · Devices & Accessories |
-| **Entertainment** | Streaming · Movies & Theater · Concerts & Events · Games · Hobbies · Sports & Recreation |
-| **Education** | Tuition · Books & Supplies · Courses & Training · Tutoring · School Fees · Exams & Certification |
-| **Personal Care** | Haircut & Salon · Gym & Fitness · Spa & Massage · Cosmetics · Nails |
-| **Kids & Childcare** | Daycare · Babysitting · School · Activities & Camps · Clothing · Toys & Gear |
-| **Pets** | Food & Treats · Vet · Grooming · Supplies · Boarding & Sitting · Medication |
-| **Insurance** | Health · Dental & Vision · Life · Disability · Umbrella |
-| **Gifts & Donations** | Gifts · Charity · Religious · Fundraisers · Cards & Wrapping |
-| **Other** | Fees & Charges · Taxes · Cash Withdrawal · Reimbursable |
-
-> [!IMPORTANT]
-> **Domain Boundaries & Exclusions:**
-> - **Utilities** (Electric, Water, Gas, Internet) belong to a property and are owned by **HomeTracker** (appear as read-only `Home - Utilities` records).
-> - **Auto & Property Insurance / Repairs** are managed directly in **AutoTrack** or **HomeTracker**.
-> - **Subscriptions** are treated as payment cadences rather than categories — e.g., Spotify goes to `Entertainment - Streaming`, OpenAI / Cursor to `Digital & Tech - AI & Dev Tools`.
-
----
-
-## 👥 Household Sharing & Multi-User Sync
-
-1. Open **Settings** &rarr; **Household Sharing**.
-2. Enter your desired Household Code (e.g. `OURHOME2026`) and click **Join Household**.
-3. Once connected:
-   - Your transactions switch from `users/{uid}/transactions` to `households/{code}/transactions`.
-   - All household members contribute to the same live ledger.
-   - You can assign individual payers to any transaction for granular cost splitting and insights.
-   - Leaving the household returns the app immediately to your personal ledger.
-
----
-
-## 🌐 Ecosystem & Sibling Apps
-
-| Application | Default Port | Target Domain | Namespace Prefix |
-| :--- | :--- | :--- | :--- |
-| **AutoTrack** | `3000` | Vehicles, fuel logs, service history, auto insurance | `Car - ...` |
-| **HomeTracker** | `3001` | Property maintenance, utilities, home appliances | `Home - ...` |
-| **ExpenseTracker** | `3004` | Daily household expenses, shopping, groceries, dining | `Expense - ...` |
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Core & Runtime**: [React 19](https://react.dev/), [TypeScript 6](https://www.typescriptlang.org/), [Node.js](https://nodejs.org/)
-- **Bundler & Build Tooling**: [Vite 8](https://vitejs.dev/) with `@vitejs/plugin-react`
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) with `@tailwindcss/vite`, `clsx`, `tailwind-merge`
-- **Database & Authentication**: [Firebase Web SDK v12](https://firebase.google.com/) (Firebase Auth, Cloud Firestore)
-- **Charts & Data Visualization**: [Recharts 3](https://recharts.org/)
+- **Bundler & Tooling**: [Vite 8](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Database & Authentication**: [Firebase Web SDK v12](https://firebase.google.com/) (Auth, Firestore)
+- **Charts**: [Recharts 3](https://recharts.org/)
 - **Icons**: [Lucide React](https://lucide.dev/)
-- **Linting & Code Quality**: [oxlint](https://oxc.rs/)
-- **Deployment & Hosting**: [Cloudflare Pages & Workers](https://pages.cloudflare.com/) (`wrangler`)
+- **Linter**: [oxlint](https://oxc.rs/)
+- **Hosting**: [Cloudflare Pages & Workers](https://pages.cloudflare.com/)
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-
-- **Node.js**: `v20.x` or higher (see [.nvmrc](file:///.nvmrc))
-- **npm**: `v10.x` or higher
-
-### Installation
-
 ```bash
-# Clone the repository
+# Clone & install dependencies
 git clone https://github.com/your-username/ExpenseTracker.git
 cd ExpenseTracker
-
-# Install dependencies
 npm install
-```
 
-### Running Locally
-
-```bash
-# Start Vite development server
+# Start development server
 npm run dev
 ```
 
-Visit [`http://localhost:3004`](http://localhost:3004) in your browser.
-
-> [!TIP]
-> **Zero-Config Local Demo Mode**: If no `.env` file is present or Firebase keys are omitted, ExpenseTracker automatically launches in offline demo mode using browser `localStorage` and sample test records.
-
----
-
-## 🔐 Environment Variables
-
-Create a `.env` file in the root directory by copying [`.env.example`](file:///.env.example):
-
-```bash
-cp .env.example .env
-```
-
-Populate the configuration with your Firebase project credentials (ensure it matches the Firebase project used by AutoTrack and HomeTracker for shared ledger features):
-
-```env
-VITE_FIREBASE_API_KEY=AIzaSy...
-VITE_FIREBASE_AUTH_DOMAIN=your-family-app.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-family-app
-VITE_FIREBASE_STORAGE_BUCKET=your-family-app.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789012
-VITE_FIREBASE_APP_ID=1:123456789012:web:abcdef123456...
-```
+Visit [`http://localhost:3000`](http://localhost:3000) or [`http://localhost:3004`](http://localhost:3004).
 
 ---
 
@@ -259,40 +221,20 @@ VITE_FIREBASE_APP_ID=1:123456789012:web:abcdef123456...
 
 | Script | Command | Purpose |
 | :--- | :--- | :--- |
-| `npm run dev` | `vite` | Starts local development server on port `3004` |
-| `npm run build` | `tsc -b && vite build` | Runs TypeScript type checking and generates production bundle in `dist/` |
-| `npm run preview` | `vite preview` | Serves local preview of the production build |
-| `npm run lint` | `oxlint` | Fast Rust-based lint check across codebase |
-| `npm run icons` | `node scripts/generate-icons.mjs` | Regenerates PWA and Apple Touch icon assets from `public/favicon.svg` |
-
----
-
-## 📱 PWA & Icon Pipeline
-
-- **Vector Source**: [`public/favicon.svg`](file:///public/favicon.svg) is the canonical source of truth for the brand mark (a clean receipt icon set on an indigo tile).
-- **Automated Rasterizer**: Running `npm run icons` executes [`scripts/generate-icons.mjs`](file:///scripts/generate-icons.mjs) using standard Node.js zlib/PNG generators without external binary dependencies.
-- **Generated Assets**:
-  - `public/favicon-32x32.png`
-  - `public/apple-touch-icon.png` (180x180)
-  - `public/pwa-192x192.png`
-  - `public/pwa-512x512.png`
-- **Service Worker**: Configured in [`public/sw.js`](file:///public/sw.js) to cache static assets and serve the app shell offline.
+| `npm run dev` | `vite` | Starts local development server |
+| `npm run build` | `tsc -b && vite build` | Type-checks and builds production bundle to `dist/` |
+| `npm run preview` | `vite preview` | Serves local preview of production build |
+| `npm run lint` | `oxlint` | Rust-powered ultra-fast lint check |
+| `npm run icons` | `node scripts/generate-icons.mjs` | Regenerates PWA icon assets from `public/favicon.svg` |
 
 ---
 
 ## 🚀 Deployment
 
-The project is pre-configured for **Cloudflare Pages / Workers** via [`wrangler.toml`](file:///wrangler.toml):
-
 ```bash
-# 1. Build the production application
 npm run build
-
-# 2. Deploy to Cloudflare Pages
 npx wrangler deploy
 ```
-
-The `./dist` directory is served with SPA fallback handling enabled via [`public/_redirects`](file:///public/_redirects) and [`public/_routes.json`](file:///public/_routes.json).
 
 ---
 
@@ -300,43 +242,38 @@ The `./dist` directory is served with SPA fallback handling enabled via [`public
 
 ```text
 ExpenseTracker/
-├── .claude/                   # Claude agent configuration
-├── public/                    # Static PWA assets & service worker
-│   ├── _redirects             # SPA routing rules for Cloudflare Pages
-│   ├── _routes.json           # Cloudflare Workers route configurations
+├── public/                    # Static PWA assets, manifest & service worker
 │   ├── favicon.svg            # Source vector icon
-│   ├── manifest.json          # Web app manifest for PWA installation
+│   ├── manifest.json          # Web app manifest
 │   └── sw.js                  # Service worker caching strategy
-├── scripts/                   # Icon generators and migration utilities
-│   ├── generate-icons.mjs     # Standalone SVG-to-PNG rasterizer script
-│   └── migrate_household_*.mjs# Household ledger migration helpers
+├── scripts/                   # Icon generator and migration scripts
+│   └── generate-icons.mjs     # Standalone SVG-to-PNG rasterizer
 ├── src/
 │   ├── components/
-│   │   ├── Auth/              # Authentication screens & modal
-│   │   ├── Dashboard/         # Quick tiles, monthly summary, quick add
-│   │   ├── Expenses/          # Expense list, entry rows, detail sheet, editor modal
-│   │   ├── Insights/          # Charts, trends, category and payer breakdowns
-│   │   ├── Layout/            # App header, tab navigation, responsive shell
-│   │   ├── PWA/               # Install prompts and offline indicators
-│   │   └── Settings/          # Household configuration & payment types modal
-│   ├── constants/             # Category & subcategory taxonomy definitions
+│   │   ├── Auth/              # Login screen & Google Auth
+│   │   ├── Dashboard/         # Quick add tiles with domain switcher & summaries
+│   │   ├── Expenses/          # Multi-domain form modal, entry rows & detail sheets
+│   │   ├── Insights/          # Target-filtered analytics & category distribution
+│   │   ├── Layout/            # Header, tab navigation & responsive shell
+│   │   ├── PWA/               # Install prompts
+│   │   └── Settings/          # Household code & payment types manager
+│   ├── constants/             # Travel, Family & Business category taxonomies
 │   ├── services/
-│   │   ├── firebase.ts        # Firebase Auth & Firestore data integration
-│   │   └── storage.ts         # LocalStorage offline synchronization layer
-│   ├── types/                 # TypeScript interfaces and data models
-│   ├── utils/                 # Transaction parsers, formatters & date helpers
-│   ├── App.tsx                # Main application orchestrator & tab controller
-│   ├── index.css              # Tailwind CSS imports and custom design tokens
-│   └── main.tsx               # React application entrypoint
-├── .env.example               # Environment variable template
-├── package.json               # Dependencies and build scripts
-├── tsconfig.json              # TypeScript root configuration
-├── vite.config.ts             # Vite bundler configuration
-└── wrangler.toml              # Cloudflare deployment settings
+│   │   ├── firebase.ts        # Firestore sync for transactions, trips & offices
+│   │   └── storage.ts         # LocalStorage caching for offline resilience
+│   ├── types/                 # TypeScript interfaces (Transaction, Trip, Office)
+│   ├── utils/                 # Namespacing, parsers & formatters
+│   ├── App.tsx                # Main application controller & router
+│   ├── index.css              # Tailwind CSS imports
+│   └── main.tsx               # Entrypoint
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── wrangler.toml
 ```
 
 ---
 
 ## 📄 License
 
-Private & proprietary — designed for personal and family household expense tracking.
+Private & proprietary — designed for family household, travel, and business expense management.

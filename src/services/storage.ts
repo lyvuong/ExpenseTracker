@@ -1,12 +1,16 @@
-import type { FirebaseConfig, LedgerEntry, PaymentTypeItem, Transaction } from '../types';
+import type { FirebaseConfig, LedgerEntry, Office, PaymentTypeItem, Transaction, Trip } from '../types';
 import { formatMoney } from '../utils/transactions';
 
 const TRANSACTIONS_KEY = 'expense_transactions_v1';
 const PAYMENT_TYPES_KEY = 'expense_payment_types_v1';
+const TRIPS_KEY = 'expense_trips_v1';
+const OFFICES_KEY = 'expense_offices_v1';
 const FIREBASE_CONFIG_KEY = 'expense_firebase_config_custom';
 const FAMILY_CODE_KEY = 'expense_family_code';
 const LAST_VEHICLE_KEY = 'expense_last_vehicle_id';
 const LAST_HOME_KEY = 'expense_last_home_id';
+const LAST_TRIP_KEY = 'expense_last_trip_id';
+const LAST_OFFICE_KEY = 'expense_last_office_id';
 
 export const INITIAL_PAYMENT_TYPES: PaymentTypeItem[] = [
   { id: 'pt-1', name: 'Cash', isSystemDefault: true, isDefault: true },
@@ -15,6 +19,42 @@ export const INITIAL_PAYMENT_TYPES: PaymentTypeItem[] = [
   { id: 'pt-4', name: 'VISA - Venture X - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
   { id: 'pt-5', name: 'VISA - Citi Costco - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
   { id: 'pt-6', name: 'Gift Card - Vanilla - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true }
+];
+
+export const INITIAL_TRIPS: Trip[] = [
+  {
+    id: 'trip-demo-1',
+    name: 'Summer in Tokyo',
+    startDate: '2026-06-10',
+    endDate: '2026-06-22',
+    tripType: 'City Break',
+    destinations: ['Tokyo', 'Kyoto'],
+    notes: 'Family vacation to Japan'
+  },
+  {
+    id: 'trip-demo-2',
+    name: 'Hawaii Beach Getaway',
+    startDate: '2026-09-01',
+    endDate: '2026-09-08',
+    tripType: 'Beach Vacation',
+    destinations: ['Maui', 'Honolulu'],
+    notes: 'Island road trip and surfing'
+  }
+];
+
+export const INITIAL_OFFICES: Office[] = [
+  {
+    id: 'office-demo-1',
+    name: 'Main Business Office',
+    officeType: 'Headquarters',
+    notes: 'Primary consulting and workspace'
+  },
+  {
+    id: 'office-demo-2',
+    name: 'Home Office & Studio',
+    officeType: 'Home Office',
+    notes: 'Remote tech & dev workspace'
+  }
 ];
 
 // Demo rows only ever live in local storage — they are filtered out before
@@ -35,9 +75,10 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     amount: 86.42,
     vendor: 'Trader Joe\'s',
     notes: 'Weekly grocery run',
-    category: 'Expense - Grocery - Supermarket',
+    category: 'Expense - Family - Food & Groceries - Supermarket',
     paymentType: 'VISA - Wyndham Rewards - Anh Vuong',
-    user: 'Household Member'
+    user: 'Household Member',
+    target: 'Family'
   },
   {
     id: `${DEMO_PREFIX}2`,
@@ -46,42 +87,64 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     amount: 24.9,
     vendor: 'Pho Saigon',
     notes: 'Lunch',
-    category: 'Expense - Food & Dining - Restaurant',
+    category: 'Expense - Family - Food & Groceries - Restaurants',
     paymentType: 'Cash',
-    user: 'Household Member'
+    user: 'Household Member',
+    target: 'Family'
   },
   {
     id: `${DEMO_PREFIX}3`,
-    date: daysAgo(4),
-    time: '08:05',
-    amount: 52.1,
-    vendor: 'Shell',
-    notes: 'Fill up',
-    category: 'Expense - Transportation - Fuel',
-    paymentType: 'VISA - Citi Costco - Anh Vuong',
-    user: 'Household Member'
+    date: daysAgo(3),
+    time: '14:15',
+    amount: 420.0,
+    vendor: 'Hilton Tokyo Odaiba',
+    notes: 'Hotel deposit for summer vacation',
+    category: 'Expense - Travel - Lodging - Hotel/Resort',
+    paymentType: 'VISA - Venture X - Anh Vuong',
+    user: 'Household Member',
+    target: 'Travel',
+    targetEntityId: 'trip-demo-1',
+    targetEntityLabel: 'Summer in Tokyo'
   },
   {
     id: `${DEMO_PREFIX}4`,
+    date: daysAgo(6),
+    time: '11:30',
+    amount: 299.0,
+    vendor: 'Cursor AI & Claude Pro',
+    notes: 'Annual AI & dev tooling subscription',
+    category: 'Expense - Business - Technology - SaaS & Software Licenses',
+    paymentType: 'VISA - Venture X - Anh Vuong',
+    user: 'Household Member',
+    target: 'Business',
+    targetEntityId: 'office-demo-2',
+    targetEntityLabel: 'Home Office & Studio',
+    isTaxDeductible: true
+  },
+  {
+    id: `${DEMO_PREFIX}5`,
     date: daysAgo(9),
     time: '19:30',
     amount: 149.0,
     vendor: 'Target',
     notes: 'Cleaning supplies and paper goods',
-    category: 'Expense - Household Supplies - Cleaning',
+    category: 'Expense - Family - Household Supplies - Cleaning',
     paymentType: 'Gift Card - Vanilla - Anh Vuong',
-    user: 'Household Member'
+    user: 'Household Member',
+    target: 'Family'
   },
   {
-    id: `${DEMO_PREFIX}5`,
+    id: `${DEMO_PREFIX}6`,
     date: daysAgo(12),
     time: '09:15',
     amount: 21.16,
     vendor: 'Namecheap',
     notes: 'Domain renewal — 1 year',
-    category: 'Expense - Digital & Tech - Domains & Hosting',
+    category: 'Expense - Business - Office & Supplies - Software & Subscriptions',
     paymentType: 'VISA - Venture X - Anh Vuong',
-    user: 'Household Member'
+    user: 'Household Member',
+    target: 'Business',
+    isTaxDeductible: true
   }
 ];
 
@@ -105,6 +168,50 @@ export const saveLocalPaymentTypes = (paymentTypes: PaymentTypeItem[]): void => 
     localStorage.setItem(PAYMENT_TYPES_KEY, JSON.stringify(paymentTypes));
   } catch (err) {
     console.error('Failed to save local payment types:', err);
+  }
+};
+
+export const loadLocalTrips = (): Trip[] => {
+  try {
+    const raw = localStorage.getItem(TRIPS_KEY);
+    if (!raw) {
+      localStorage.setItem(TRIPS_KEY, JSON.stringify(INITIAL_TRIPS));
+      return INITIAL_TRIPS;
+    }
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to load local trips:', err);
+    return INITIAL_TRIPS;
+  }
+};
+
+export const saveLocalTrips = (trips: Trip[]): void => {
+  try {
+    localStorage.setItem(TRIPS_KEY, JSON.stringify(trips));
+  } catch (err) {
+    console.error('Failed to save local trips:', err);
+  }
+};
+
+export const loadLocalOffices = (): Office[] => {
+  try {
+    const raw = localStorage.getItem(OFFICES_KEY);
+    if (!raw) {
+      localStorage.setItem(OFFICES_KEY, JSON.stringify(INITIAL_OFFICES));
+      return INITIAL_OFFICES;
+    }
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to load local offices:', err);
+    return INITIAL_OFFICES;
+  }
+};
+
+export const saveLocalOffices = (offices: Office[]): void => {
+  try {
+    localStorage.setItem(OFFICES_KEY, JSON.stringify(offices));
+  } catch (err) {
+    console.error('Failed to save local offices:', err);
   }
 };
 
@@ -167,8 +274,7 @@ export const setStoredFamilyCode = (code: string): void => {
   }
 };
 
-// Remembers the last vehicle/home an entry was associated with, so the
-// "Move to Car"/"Move to Home" picker defaults to it next time.
+// Remembers entity IDs so pickers remember recent choices
 export const getStoredLastVehicleId = (): string => localStorage.getItem(LAST_VEHICLE_KEY) || '';
 export const setStoredLastVehicleId = (id: string): void => {
   if (id) localStorage.setItem(LAST_VEHICLE_KEY, id);
@@ -176,6 +282,14 @@ export const setStoredLastVehicleId = (id: string): void => {
 export const getStoredLastHomeId = (): string => localStorage.getItem(LAST_HOME_KEY) || '';
 export const setStoredLastHomeId = (id: string): void => {
   if (id) localStorage.setItem(LAST_HOME_KEY, id);
+};
+export const getStoredLastTripId = (): string => localStorage.getItem(LAST_TRIP_KEY) || '';
+export const setStoredLastTripId = (id: string): void => {
+  if (id) localStorage.setItem(LAST_TRIP_KEY, id);
+};
+export const getStoredLastOfficeId = (): string => localStorage.getItem(LAST_OFFICE_KEY) || '';
+export const setStoredLastOfficeId = (id: string): void => {
+  if (id) localStorage.setItem(LAST_OFFICE_KEY, id);
 };
 
 const downloadBlob = (blob: Blob, filename: string): void => {
@@ -192,11 +306,13 @@ const downloadBlob = (blob: Blob, filename: string): void => {
 const csvCell = (value: string): string => `"${(value || '').replace(/"/g, '""')}"`;
 
 export const exportEntriesAsCSV = (entries: LedgerEntry[]): void => {
-  const headers = ['Date', 'Time', 'Source', 'Category', 'Vendor', 'Amount', 'Payment Type', 'Member', 'Notes', 'Tax Deductible'];
+  const headers = ['Date', 'Time', 'Target', 'Source', 'Entity', 'Category', 'Vendor', 'Amount', 'Payment Type', 'Member', 'Notes', 'Tax Deductible'];
   const rows = entries.map(e => [
     csvCell(e.date),
     csvCell(e.time),
+    csvCell(e.target || 'Family'),
     csvCell(e.source),
+    csvCell(e.targetEntityLabel || ''),
     csvCell([e.label, e.detail].filter(Boolean).join(' · ')),
     csvCell(e.vendor),
     e.amount.toFixed(2),
@@ -215,7 +331,7 @@ export const exportEntriesAsCSV = (entries: LedgerEntry[]): void => {
 
 export const exportTransactionsAsJSON = (transactions: Transaction[]): void => {
   const backup = {
-    version: '1.0',
+    version: '2.0',
     app: 'ExpenseTracker',
     exportDate: new Date().toISOString(),
     total: formatMoney(transactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0)),

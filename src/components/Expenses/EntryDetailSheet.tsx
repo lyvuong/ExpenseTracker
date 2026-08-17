@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Lock } from 'lucide-react';
 import { getCategoryMeta, SOURCE_META } from '../../constants/categories';
 import { formatDayLabel, formatMoney } from '../../utils/transactions';
-import type { LedgerEntry } from '../../types';
+import type { ExpenseTarget, LedgerEntry } from '../../types';
 
 interface EntryDetailSheetProps {
   entry: LedgerEntry | null;
@@ -16,19 +16,19 @@ const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value })
   </div>
 );
 
-/**
- * Read-only view of a ledger entry owned by a sibling app. Those rows are a
- * projection of a record living in the app that created them — editing them
- * here would be overwritten on that app's next save and would strip the
- * context encoded in their category — so this sheet explains rather than edits.
- */
 export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClose }) => {
   if (!entry) return null;
 
-  const sourceMeta = SOURCE_META[entry.source];
-  const meta = getCategoryMeta(entry.label);
+  const sourceMeta = SOURCE_META[entry.source] || SOURCE_META.Expense;
+  const meta = getCategoryMeta(entry.label, entry.target as ExpenseTarget);
   const Icon = entry.source === 'Expense' ? meta.icon : sourceMeta.icon;
   const color = entry.source === 'Expense' ? meta.color : sourceMeta.color;
+
+  const targetBadge = entry.target === 'Travel'
+    ? { text: 'Travel', bg: 'bg-sky-50 text-sky-700' }
+    : entry.target === 'Business'
+    ? { text: 'Business', bg: 'bg-indigo-50 text-indigo-700' }
+    : { text: 'Family', bg: 'bg-emerald-50 text-emerald-700' };
 
   return (
     <div
@@ -66,11 +66,16 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-1.5">
-            <span
-              className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
-              style={{ color: sourceMeta.color, backgroundColor: `${sourceMeta.color}1a` }}
-            >
-              {sourceMeta.label}
+            {entry.source !== 'Expense' && (
+              <span
+                className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
+                style={{ color: sourceMeta.color, backgroundColor: `${sourceMeta.color}1a` }}
+              >
+                {sourceMeta.label}
+              </span>
+            )}
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${targetBadge.bg}`}>
+              {targetBadge.text}
             </span>
             {entry.amount < 0 && (
               <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-amber-700 bg-amber-50">
@@ -87,20 +92,26 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
           <div className="mt-4 divide-y divide-slate-100">
             <DetailRow label="Date" value={formatDayLabel(entry.date)} />
             {entry.time && <DetailRow label="Time" value={entry.time} />}
+            <DetailRow label="Target Domain" value={entry.target || 'Family'} />
+            {entry.targetEntityLabel && (
+              <DetailRow label={entry.target === 'Travel' ? 'Linked Trip' : 'Linked Office'} value={entry.targetEntityLabel} />
+            )}
             <DetailRow label="Category" value={[entry.label, entry.detail].filter(Boolean).join(' · ')} />
             <DetailRow label="Payment" value={entry.paymentType} />
             {entry.user && <DetailRow label="Paid by" value={entry.user} />}
             {entry.notes && <DetailRow label="Notes" value={entry.notes} />}
           </div>
 
-          <div className="mt-5 flex gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-            <Lock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-slate-600 leading-relaxed">
-              This entry was logged in <span className="font-semibold text-slate-800">{sourceMeta.app}</span> and
-              is read-only here. Open {sourceMeta.app} to edit or delete it — changes show up in this
-              ledger automatically.
-            </p>
-          </div>
+          {entry.source !== 'Expense' && (
+            <div className="mt-5 flex gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+              <Lock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-600 leading-relaxed">
+                This entry was logged in <span className="font-semibold text-slate-800">{sourceMeta.app}</span> and
+                is read-only here. Open {sourceMeta.app} to edit or delete it — changes show up in this
+                ledger automatically.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-4 border-t border-slate-200">

@@ -1,19 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Download, Plus, ReceiptText } from 'lucide-react';
+import { Search, SlidersHorizontal, Download, ReceiptText, UsersRound, Plane, Briefcase, House, Car } from 'lucide-react';
 import { EntryRow } from './EntryRow';
-import { CATEGORIES, SOURCE_META, getSubcategories } from '../../constants/categories';
+import { ALL_CATEGORIES, CATEGORIES_BY_TARGET, getSubcategoriesFor } from '../../constants/categories';
 import { currentYearKey, formatDayLabel, formatMoney, yearKey } from '../../utils/transactions';
-import type { LedgerEntry, LedgerSource } from '../../types';
+import type { ExpenseTarget, LedgerEntry, Target } from '../../types';
 
 interface ExpenseListProps {
   entries: LedgerEntry[];
-  onAddExpense: () => void;
+  onAddExpense: (target?: ExpenseTarget) => void;
   onEditEntry: (entry: LedgerEntry) => void;
   onViewEntry: (entry: LedgerEntry) => void;
   onExportCSV: (entries: LedgerEntry[]) => void;
 }
 
-const SOURCES: (LedgerSource | 'All')[] = ['All', 'Expense', 'Home', 'Car'];
+const TARGET_FILTERS: (Target | 'All')[] = ['All', 'Family', 'Travel', 'Business', 'Property', 'Fleet'];
 
 export const ExpenseList: React.FC<ExpenseListProps> = ({
   entries,
@@ -27,10 +27,10 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   const [year, setYear] = useState(currentYearKey());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [targetFilter, setTargetFilter] = useState<Target | 'All'>('All');
   const [category, setCategory] = useState('all');
   const [subcategory, setSubcategory] = useState('all');
   const [member, setMember] = useState('all');
-  const [source, setSource] = useState<LedgerSource | 'All'>('All');
   const [showFilters, setShowFilters] = useState(false);
 
   const years = useMemo(() => {
@@ -52,16 +52,24 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
     setDateMode('year');
     setYear(currentYearKey());
   };
+
   const members = useMemo(
     () => Array.from(new Set(entries.map(e => e.user).filter(Boolean))).sort(),
     [entries]
   );
 
-  // Only offered once a category is picked, since subcategories are per-category.
-  const subcategories = useMemo(
-    () => (category === 'all' ? [] : getSubcategories(category)),
-    [category]
-  );
+  const availableCategories = useMemo(() => {
+    if (targetFilter === 'Family') return CATEGORIES_BY_TARGET.Family.map(c => c.id);
+    if (targetFilter === 'Travel') return CATEGORIES_BY_TARGET.Travel.map(c => c.id);
+    if (targetFilter === 'Business') return CATEGORIES_BY_TARGET.Business.map(c => c.id);
+    return Array.from(new Set(ALL_CATEGORIES.map(c => c.id)));
+  }, [targetFilter]);
+
+  const availableSubcategories = useMemo(() => {
+    if (category === 'all') return [];
+    const target = (targetFilter === 'Travel' ? 'Travel' : targetFilter === 'Business' ? 'Business' : 'Family') as ExpenseTarget;
+    return getSubcategoriesFor(target, category);
+  }, [category, targetFilter]);
 
   const selectCategory = (next: string) => {
     setCategory(next);
@@ -71,22 +79,28 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return entries.filter(e => {
-      if (source !== 'All' && e.source !== source) return false;
+      if (targetFilter !== 'All') {
+        if (targetFilter === 'Property' && e.source !== 'Home' && e.target !== 'Property') return false;
+        if (targetFilter === 'Fleet' && e.source !== 'Car' && e.target !== 'Fleet') return false;
+        if (targetFilter === 'Travel' && e.target !== 'Travel') return false;
+        if (targetFilter === 'Business' && e.target !== 'Business') return false;
+        if (targetFilter === 'Family' && e.target !== 'Family') return false;
+      }
       if (dateMode === 'year') {
         if (year !== 'all' && yearKey(e.date) !== year) return false;
       } else {
         if (startDate && e.date < startDate) return false;
         if (endDate && e.date > endDate) return false;
       }
-      if (category !== 'all' && e.label !== category) return false;
-      if (subcategory !== 'all' && e.detail !== subcategory) return false;
+      if (category !== 'all' && e.label.toLowerCase() !== category.toLowerCase()) return false;
+      if (subcategory !== 'all' && e.detail.toLowerCase() !== subcategory.toLowerCase()) return false;
       if (member !== 'all' && e.user !== member) return false;
       if (!term) return true;
-      return [e.vendor, e.label, e.detail, e.notes, e.user, e.paymentType]
+      return [e.vendor, e.label, e.detail, e.notes, e.user, e.paymentType, e.targetEntityLabel]
         .filter(Boolean)
         .some(v => v!.toLowerCase().includes(term));
     });
-  }, [entries, search, dateMode, year, startDate, endDate, category, subcategory, member, source]);
+  }, [entries, search, dateMode, year, startDate, endDate, targetFilter, category, subcategory, member]);
 
   const total = filtered.reduce((sum, e) => sum + e.amount, 0);
 
@@ -101,18 +115,48 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   }, [filtered]);
 
   const hasActiveFilter =
-    category !== 'all' || subcategory !== 'all' || member !== 'all' || source !== 'All';
+    targetFilter !== 'All' || category !== 'all' || subcategory !== 'all' || member !== 'all';
 
   return (
     <section className="space-y-4">
 
+      {/* Target Domain Filter Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        {TARGET_FILTERS.map(t => {
+          const isActive = targetFilter === t;
+          return (
+            <button
+              key={t}
+              onClick={() => {
+                setTargetFilter(t);
+                setCategory('all');
+                setSubcategory('all');
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap ${
+                isActive
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              {t === 'Family' && <UsersRound className="w-3 h-3 text-emerald-500" />}
+              {t === 'Travel' && <Plane className="w-3 h-3 text-sky-500" />}
+              {t === 'Business' && <Briefcase className="w-3 h-3 text-indigo-500" />}
+              {t === 'Property' && <House className="w-3 h-3 text-emerald-600" />}
+              {t === 'Fleet' && <Car className="w-3 h-3 text-amber-500" />}
+              <span>{t === 'All' ? 'All Domains' : t}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search & Actions */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search vendor, category, notes…"
+            placeholder="Search vendor, category, notes, trip…"
             className="field pl-9"
           />
         </div>
@@ -136,6 +180,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
         </button>
       </div>
 
+      {/* Date scope */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
           <button
@@ -193,30 +238,15 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
 
       {showFilters && (
         <div className="card p-4 space-y-3">
-          <div className="flex flex-wrap gap-1.5">
-            {SOURCES.map(s => (
-              <button
-                key={s}
-                onClick={() => setSource(s)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                  source === s
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                {s === 'All' ? 'All apps' : SOURCE_META[s].label}
-              </button>
-            ))}
-          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="field-label" htmlFor="filter-category">Category</label>
               <select id="filter-category" value={category} onChange={e => selectCategory(e.target.value)} className="field">
                 <option value="all">All categories</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            {subcategories.length > 0 && (
+            {availableSubcategories.length > 0 && (
               <div>
                 <label className="field-label" htmlFor="filter-subcategory">Subcategory</label>
                 <select
@@ -226,7 +256,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                   className="field"
                 >
                   <option value="all">All subcategories</option>
-                  {subcategories.map(s => <option key={s} value={s}>{s}</option>)}
+                  {availableSubcategories.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
             )}
@@ -240,15 +270,16 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
           </div>
           {hasActiveFilter && (
             <button
-              onClick={() => { selectCategory('all'); setMember('all'); setSource('All'); }}
+              onClick={() => { setTargetFilter('All'); selectCategory('all'); setMember('all'); }}
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
-              Clear filters
+              Clear all filters
             </button>
           )}
         </div>
       )}
 
+      {/* Entry Count & Total */}
       <div className="flex items-baseline justify-between px-1">
         <span className="text-xs font-semibold text-slate-500">
           {filtered.length} {filtered.length === 1 ? 'entry' : 'entries'}
@@ -259,15 +290,31 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
       {grouped.length === 0 ? (
         <div className="card p-10 text-center">
           <ReceiptText className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-700">No expenses yet</p>
-          <p className="text-xs text-slate-500 mt-1 mb-4">Log your first grocery run, lunch or trip.</p>
-          <button
-            onClick={onAddExpense}
-            className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add expense
-          </button>
+          <p className="text-sm font-semibold text-slate-700">No expenses found</p>
+          <p className="text-xs text-slate-500 mt-1 mb-4">Log a family, travel or business expense.</p>
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => onAddExpense('Family')}
+              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+            >
+              <UsersRound className="w-3.5 h-3.5" />
+              Family
+            </button>
+            <button
+              onClick={() => onAddExpense('Travel')}
+              className="inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+            >
+              <Plane className="w-3.5 h-3.5" />
+              Travel
+            </button>
+            <button
+              onClick={() => onAddExpense('Business')}
+              className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              Business
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">

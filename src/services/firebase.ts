@@ -21,7 +21,18 @@ import {
   orderBy
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import type { AssociableHome, AssociableVehicle, FirebaseConfig, LedgerEntry, PaymentTypeItem, Transaction, UserAuditInfo, UserProfile } from '../types';
+import type {
+  AssociableHome,
+  AssociableVehicle,
+  FirebaseConfig,
+  LedgerEntry,
+  Office,
+  PaymentTypeItem,
+  Transaction,
+  Trip,
+  UserAuditInfo,
+  UserProfile
+} from '../types';
 import {
   getStoredFirebaseConfig,
   setStoredFirebaseConfig,
@@ -120,7 +131,7 @@ const getStorageTarget = (userId: string, familyCode?: string) => {
 // ==========================================
 // Shared Transactions Ledger (Firestore)
 // users/{uid}/transactions or households/{code}/transactions — the exact same
-// collection HomeTracker and AutoTrack write to.
+// collection HomeTracker, AutoTrack, and Statements write to.
 // ==========================================
 
 export const subscribeFirestoreTransactions = (
@@ -173,11 +184,100 @@ export const deleteFirestoreTransaction = async (
 };
 
 // ==========================================
+// Target Entity Collections (Trips & Offices)
+// Shared with Statements PWA: households/{code}/trips and households/{code}/offices
+// ==========================================
+
+export const subscribeFirestoreTrips = (
+  userId: string,
+  familyCode: string | undefined,
+  callback: (trips: Trip[]) => void
+) => {
+  if (!db) return () => {};
+  const target = getStorageTarget(userId, familyCode);
+  const colRef = collection(db, target.root, target.id, 'trips');
+  return onSnapshot(colRef, (snapshot) => {
+    callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Trip)));
+  }, (error) => {
+    console.error('[Firestore] Trips sync error:', error);
+  });
+};
+
+export const saveFirestoreTrip = async (
+  userId: string,
+  trip: Trip,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const clean = JSON.parse(JSON.stringify(trip));
+    await setDoc(doc(db, target.root, target.id, 'trips', trip.id), clean, { merge: true });
+  } catch (err) {
+    console.error('[Firestore] Error saving trip:', err);
+  }
+};
+
+export const deleteFirestoreTrip = async (
+  userId: string,
+  tripId: string,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    await deleteDoc(doc(db, target.root, target.id, 'trips', tripId));
+  } catch (err) {
+    console.error('[Firestore] Error deleting trip:', err);
+  }
+};
+
+export const subscribeFirestoreOffices = (
+  userId: string,
+  familyCode: string | undefined,
+  callback: (offices: Office[]) => void
+) => {
+  if (!db) return () => {};
+  const target = getStorageTarget(userId, familyCode);
+  const colRef = collection(db, target.root, target.id, 'offices');
+  return onSnapshot(colRef, (snapshot) => {
+    callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Office)));
+  }, (error) => {
+    console.error('[Firestore] Offices sync error:', error);
+  });
+};
+
+export const saveFirestoreOffice = async (
+  userId: string,
+  office: Office,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const clean = JSON.parse(JSON.stringify(office));
+    await setDoc(doc(db, target.root, target.id, 'offices', office.id), clean, { merge: true });
+  } catch (err) {
+    console.error('[Firestore] Error saving office:', err);
+  }
+};
+
+export const deleteFirestoreOffice = async (
+  userId: string,
+  officeId: string,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    await deleteDoc(doc(db, target.root, target.id, 'offices', officeId));
+  } catch (err) {
+    console.error('[Firestore] Error deleting office:', err);
+  }
+};
+
+// ==========================================
 // Sibling-app association (CarTracker / HomeTracker)
-// Read-only lookups of their vehicles/homes, and direct writes into their
-// records/homeRecords collections, so an Expense entry can be "moved" into
-// one of those apps by giving it a matching vehicle-/home-specific record —
-// same household root, same doc ID as the shared Transaction.
 // ==========================================
 
 export const getVehiclesOnce = async (userId: string, familyCode?: string): Promise<AssociableVehicle[]> => {
@@ -204,10 +304,6 @@ export const getHomesOnce = async (userId: string, familyCode?: string): Promise
   }
 };
 
-// Creates the CarTracker-shaped ServiceRecord doc that pairs with `entry`'s
-// Transaction (same ID). Category/type default to 'Other'/'Other Expense'
-// since Expense has no equivalent of CarTracker's category taxonomy — the
-// user can refine it from within CarTracker afterwards.
 export const createCarRecord = async (
   userId: string,
   vehicleId: string,
@@ -233,9 +329,6 @@ export const createCarRecord = async (
   }
 };
 
-// Creates the HomeTracker-shaped HomeRecord doc that pairs with `entry`'s
-// Transaction (same ID). Category/type default to 'Other'/'Expense' for the
-// same reason as createCarRecord above.
 export const createHomeRecord = async (
   userId: string,
   homeId: string,

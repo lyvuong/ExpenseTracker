@@ -15,11 +15,13 @@ import type {
   AssociableHome,
   AssociableVehicle,
   AssociationTarget,
-  ExpenseCategory,
   ExpenseDraft,
+  ExpenseTarget,
   LedgerEntry,
+  Office,
   PaymentTypeItem,
   Transaction,
+  Trip,
   UserAuditInfo,
   UserProfile
 } from './types';
@@ -34,13 +36,19 @@ import {
   getStoredLastHomeId,
   getStoredLastVehicleId,
   importJSONBackup,
+  loadLocalOffices,
   loadLocalPaymentTypes,
   loadLocalTransactions,
+  loadLocalTrips,
   restoreSampleData,
+  saveLocalOffices,
   saveLocalPaymentTypes,
   saveLocalTransactions,
+  saveLocalTrips,
   setStoredFamilyCode,
   setStoredLastHomeId,
+  setStoredLastOfficeId,
+  setStoredLastTripId,
   setStoredLastVehicleId
 } from './services/storage';
 import {
@@ -54,11 +62,15 @@ import {
   isFirebaseConfigured,
   loginWithGoogle,
   logoutFirebase,
+  saveFirestoreOffice,
   saveFirestorePaymentType,
   saveFirestoreTransaction,
+  saveFirestoreTrip,
   subscribeAuth,
+  subscribeFirestoreOffices,
   subscribeFirestorePaymentTypes,
   subscribeFirestoreTransactions,
+  subscribeFirestoreTrips,
   subscribeHouseholdMembers,
   verifyOrCreateHousehold
 } from './services/firebase';
@@ -67,6 +79,9 @@ import { PaymentTypesModal } from './components/Settings/PaymentTypesModal';
 export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>(() => loadLocalTransactions());
   const [paymentTypes, setPaymentTypes] = useState<PaymentTypeItem[]>(() => loadLocalPaymentTypes());
+  const [trips, setTrips] = useState<Trip[]>(() => loadLocalTrips());
+  const [offices, setOffices] = useState<Office[]>(() => loadLocalOffices());
+
   const [familyCode, setFamilyCodeState] = useState<string>(() => getStoredFamilyCode());
   const [householdMembers, setHouseholdMembers] = useState<UserAuditInfo[]>([]);
   const [vehicles, setVehicles] = useState<AssociableVehicle[]>([]);
@@ -82,7 +97,8 @@ export const App: React.FC = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<LedgerEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<LedgerEntry | null>(null);
-  const [presetCategory, setPresetCategory] = useState<ExpenseCategory | undefined>(undefined);
+  const [presetCategory, setPresetCategory] = useState<string | undefined>(undefined);
+  const [presetTarget, setPresetTarget] = useState<ExpenseTarget | undefined>(undefined);
 
   const memberName = user?.displayName || 'Household Member';
 
@@ -105,7 +121,7 @@ export const App: React.FC = () => {
     if (action === 'log') setActiveTab('log');
   }, []);
 
-  // Firebase init, auth, and the shared transactions subscription
+  // Firebase init, auth, and shared subscriptions
   useEffect(() => {
     const initialized = initializeFirebaseService();
     const active = initialized && isFirebaseConfigured();
@@ -118,14 +134,20 @@ export const App: React.FC = () => {
 
     let unsubTransactions: (() => void) | null = null;
     let unsubPaymentTypes: (() => void) | null = null;
+    let unsubTrips: (() => void) | null = null;
+    let unsubOffices: (() => void) | null = null;
 
     const unsubscribeAuth = subscribeAuth((userProfile) => {
       setUser(userProfile);
       setIsAuthLoading(false);
       unsubTransactions?.();
       unsubPaymentTypes?.();
+      unsubTrips?.();
+      unsubOffices?.();
       unsubTransactions = null;
       unsubPaymentTypes = null;
+      unsubTrips = null;
+      unsubOffices = null;
 
       if (!userProfile) {
         setStoredFamilyCode('');
@@ -133,8 +155,7 @@ export const App: React.FC = () => {
         return;
       }
 
-      // Cloud is the source of truth once signed in; anything logged locally
-      // before sign-in (demo rows excluded) is seeded up on first sync.
+      // 1. Transactions subscription
       let hasSeeded = false;
       unsubTransactions = subscribeFirestoreTransactions(userProfile.uid, familyCode, (cloudTransactions) => {
         if (cloudTransactions.length > 0) {
@@ -159,7 +180,7 @@ export const App: React.FC = () => {
         }
       });
 
-      // Subscribe to payment types in cloud
+      // 2. Payment types subscription
       let hasSeededPaymentTypes = false;
       unsubPaymentTypes = subscribeFirestorePaymentTypes(userProfile.uid, familyCode, (cloudTypes) => {
         if (cloudTypes.length > 0) {
@@ -180,16 +201,34 @@ export const App: React.FC = () => {
         saveLocalPaymentTypes(typesToSeed);
         typesToSeed.forEach(pt => saveFirestorePaymentType(userProfile.uid, pt, familyCode));
       });
+
+      // 3. Trips subscription (shared with Statements)
+      unsubTrips = subscribeFirestoreTrips(userProfile.uid, familyCode, (cloudTrips) => {
+        if (cloudTrips.length > 0) {
+          setTrips(cloudTrips);
+          saveLocalTrips(cloudTrips);
+        }
+      });
+
+      // 4. Offices subscription (shared with Statements)
+      unsubOffices = subscribeFirestoreOffices(userProfile.uid, familyCode, (cloudOffices) => {
+        if (cloudOffices.length > 0) {
+          setOffices(cloudOffices);
+          saveLocalOffices(cloudOffices);
+        }
+      });
     });
 
     return () => {
       unsubTransactions?.();
       unsubPaymentTypes?.();
+      unsubTrips?.();
+      unsubOffices?.();
       unsubscribeAuth();
     };
   }, [familyCode]);
 
-  // Household roster, so expenses can be attributed to any member
+  // Household roster
   useEffect(() => {
     if (!isFirebaseActive || !user || !familyCode) {
       setHouseholdMembers([]);
@@ -198,8 +237,7 @@ export const App: React.FC = () => {
     return subscribeHouseholdMembers(familyCode, setHouseholdMembers);
   }, [isFirebaseActive, user, familyCode]);
 
-  // Vehicles/homes from the sibling apps, fetched once so an entry can be
-  // associated with one of them (see handleAssociateEntry).
+  // Sibling app entities (vehicles / homes)
   useEffect(() => {
     if (!isFirebaseActive || !user) {
       setVehicles([]);
@@ -217,6 +255,14 @@ export const App: React.FC = () => {
   useEffect(() => {
     saveLocalPaymentTypes(paymentTypes);
   }, [paymentTypes]);
+
+  useEffect(() => {
+    saveLocalTrips(trips);
+  }, [trips]);
+
+  useEffect(() => {
+    saveLocalOffices(offices);
+  }, [offices]);
 
   const handleAddPaymentType = (name: string) => {
     const authUserName = user?.displayName || user?.email?.split('@')[0] || memberName;
@@ -250,6 +296,22 @@ export const App: React.FC = () => {
     setPaymentTypes(prev => prev.filter(pt => pt.id !== id));
     if (user && isFirebaseActive) {
       deleteFirestorePaymentType(user.uid, id, familyCode);
+    }
+  };
+
+  const handleSaveTrip = (trip: Trip) => {
+    setTrips(prev => [...prev.filter(t => t.id !== trip.id), trip]);
+    setStoredLastTripId(trip.id);
+    if (user && isFirebaseActive) {
+      saveFirestoreTrip(user.uid, trip, familyCode);
+    }
+  };
+
+  const handleSaveOffice = (office: Office) => {
+    setOffices(prev => [...prev.filter(o => o.id !== office.id), office]);
+    setStoredLastOfficeId(office.id);
+    if (user && isFirebaseActive) {
+      saveFirestoreOffice(user.uid, office, familyCode);
     }
   };
 
@@ -291,21 +353,21 @@ export const App: React.FC = () => {
     return { success: true, message: `Sharing with household ${cleanCode}.` };
   };
 
-  const openNewExpense = (category?: ExpenseCategory) => {
+  const openNewExpense = (category?: string, target?: ExpenseTarget) => {
     setEditingEntry(null);
     setPresetCategory(category);
+    setPresetTarget(target);
     setIsFormOpen(true);
   };
 
   const openEditExpense = (entry: LedgerEntry) => {
-    // Entries owned by a sibling app get the read-only sheet instead: editing
-    // them here would be overwritten on that app's next save.
     if (!entry.isEditable) {
       setViewingEntry(entry);
       return;
     }
     setEditingEntry(entry);
     setPresetCategory(undefined);
+    setPresetTarget(undefined);
     setIsFormOpen(true);
   };
 
@@ -318,10 +380,13 @@ export const App: React.FC = () => {
       amount: draft.amount,
       vendor: draft.vendor,
       notes: draft.notes || '',
-      category: buildTransactionCategory(draft.category, draft.subcategory),
+      category: buildTransactionCategory(draft.target, draft.category, draft.subcategory),
       paymentType: draft.paymentType,
       user: draft.user || memberName,
-      isTaxDeductible: draft.isTaxDeductible
+      isTaxDeductible: draft.isTaxDeductible,
+      target: draft.target,
+      targetEntityId: draft.targetEntityId,
+      targetEntityLabel: draft.targetEntityLabel
     };
 
     setTransactions(prev => prev.some(t => t.id === id)
@@ -331,6 +396,7 @@ export const App: React.FC = () => {
     setIsFormOpen(false);
     setEditingEntry(null);
     setPresetCategory(undefined);
+    setPresetTarget(undefined);
 
     if (user && isFirebaseActive) {
       saveFirestoreTransaction(user.uid, transaction, familyCode);
@@ -347,10 +413,6 @@ export const App: React.FC = () => {
     }
   };
 
-  // Associates the entry currently open in the edit modal with a vehicle in
-  // CarTracker or a home in HomeTracker, by creating that app's
-  // vehicle-/home-specific record (sharing this entry's Transaction ID) and
-  // re-namespacing the category so it reads as their row from then on.
   const handleAssociateEntry = async (target: AssociationTarget) => {
     if (!user || !isFirebaseActive || !editingEntry) return;
     const entry = editingEntry;
@@ -447,7 +509,7 @@ export const App: React.FC = () => {
         {activeTab === 'log' && (
           <ExpenseList
             entries={entries}
-            onAddExpense={() => openNewExpense()}
+            onAddExpense={openNewExpense}
             onEditEntry={openEditExpense}
             onViewEntry={setViewingEntry}
             onExportCSV={exportEntriesAsCSV}
@@ -483,6 +545,7 @@ export const App: React.FC = () => {
           setIsFormOpen(false);
           setEditingEntry(null);
           setPresetCategory(undefined);
+          setPresetTarget(undefined);
         }}
         onSave={handleSaveExpense}
         onDelete={handleDeleteExpense}
@@ -491,8 +554,13 @@ export const App: React.FC = () => {
         members={memberNames}
         currentUser={memberName}
         presetCategory={presetCategory}
+        presetTarget={presetTarget}
         paymentTypes={paymentTypes}
         onManagePaymentTypes={() => setIsPaymentModalOpen(true)}
+        trips={trips}
+        offices={offices}
+        onSaveTrip={handleSaveTrip}
+        onSaveOffice={handleSaveOffice}
         vehicles={vehicles}
         homes={homes}
         defaultVehicleId={getStoredLastVehicleId()}
@@ -516,7 +584,7 @@ export const App: React.FC = () => {
       <PWAInstallPrompt />
 
       <footer className="hidden sm:block border-t border-slate-200 bg-white py-5 text-center text-xs text-slate-400 no-print">
-        <p>ExpenseTracker · shared household ledger · Cloudflare Pages ready · offline capable</p>
+        <p>ExpenseTracker · Family, Travel & Business Multi-Domain Ledger · Cloudflare Pages ready · offline capable</p>
       </footer>
     </div>
   );

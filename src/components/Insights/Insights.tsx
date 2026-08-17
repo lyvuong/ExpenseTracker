@@ -12,7 +12,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { Store, Users } from 'lucide-react';
-import { getCategoryMeta, SOURCE_META } from '../../constants/categories';
+import { getCategoryMeta } from '../../constants/categories';
 import {
   currentMonthKey,
   formatCompactMoney,
@@ -21,7 +21,7 @@ import {
   monthLabel,
   recentMonthKeys
 } from '../../utils/transactions';
-import type { LedgerEntry } from '../../types';
+import type { LedgerEntry, Target } from '../../types';
 
 interface InsightsProps {
   entries: LedgerEntry[];
@@ -38,31 +38,57 @@ const sumBy = (entries: LedgerEntry[], key: (e: LedgerEntry) => string) => {
     .sort((a, b) => b.value - a.value);
 };
 
+const TARGET_COLORS: Record<string, string> = {
+  Family: '#10b981',
+  Travel: '#0ea5e9',
+  Business: '#6366f1',
+  Property: '#14b8a6',
+  Fleet: '#f59e0b',
+  Other: '#94a3b8'
+};
+
 export const Insights: React.FC<InsightsProps> = ({ entries }) => {
   const [month, setMonth] = useState<string>(currentMonthKey());
+  const [targetScope, setTargetScope] = useState<Target | 'All'>('All');
 
   const months = useMemo(() => {
     const fromData = Array.from(new Set(entries.map(e => monthKey(e.date)).filter(Boolean)));
     return Array.from(new Set([...recentMonthKeys(6), ...fromData])).sort().reverse();
   }, [entries]);
 
-  const monthEntries = useMemo(
-    () => entries.filter(e => monthKey(e.date) === month),
-    [entries, month]
-  );
+  const monthEntries = useMemo(() => {
+    return entries.filter(e => {
+      if (monthKey(e.date) !== month) return false;
+      if (targetScope !== 'All') {
+        if (targetScope === 'Property' && e.source !== 'Home' && e.target !== 'Property') return false;
+        if (targetScope === 'Fleet' && e.source !== 'Car' && e.target !== 'Fleet') return false;
+        if (targetScope === 'Travel' && e.target !== 'Travel') return false;
+        if (targetScope === 'Business' && e.target !== 'Business') return false;
+        if (targetScope === 'Family' && e.target !== 'Family') return false;
+      }
+      return true;
+    });
+  }, [entries, month, targetScope]);
 
   const byCategory = useMemo(() => sumBy(monthEntries, e => e.label), [monthEntries]);
+  const byTarget = useMemo(() => sumBy(entries.filter(e => monthKey(e.date) === month), e => e.target || 'Family'), [entries, month]);
   const byVendor = useMemo(() => sumBy(monthEntries, e => e.vendor).slice(0, 6), [monthEntries]);
   const byMember = useMemo(() => sumBy(monthEntries, e => e.user), [monthEntries]);
-  const bySource = useMemo(() => sumBy(monthEntries, e => e.source), [monthEntries]);
 
   const trend = useMemo(() => {
     const keys = recentMonthKeys(6).reverse();
-    return keys.map(k => ({
-      name: monthLabel(k, { short: true }).replace(/ \d{4}$/, ''),
-      total: Math.round(entries.filter(e => monthKey(e.date) === k).reduce((sum, e) => sum + e.amount, 0) * 100) / 100
-    }));
-  }, [entries]);
+    return keys.map(k => {
+      const filtered = entries.filter(e => {
+        if (monthKey(e.date) !== k) return false;
+        if (targetScope !== 'All' && e.target !== targetScope) return false;
+        return true;
+      });
+      return {
+        name: monthLabel(k, { short: true }).replace(/ \d{4}$/, ''),
+        total: Math.round(filtered.reduce((sum, e) => sum + e.amount, 0) * 100) / 100
+      };
+    });
+  }, [entries, targetScope]);
 
   const total = monthEntries.reduce((sum, e) => sum + e.amount, 0);
 
@@ -76,10 +102,32 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
   return (
     <section className="space-y-4">
 
+      {/* Target Domain Scope Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        {(['All', 'Family', 'Travel', 'Business', 'Property', 'Fleet'] as (Target | 'All')[]).map(t => {
+          const isActive = targetScope === t;
+          return (
+            <button
+              key={t}
+              onClick={() => setTargetScope(t)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap ${
+                isActive
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              {t === 'All' ? 'All Domains' : t}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="card p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Total spent</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              {targetScope === 'All' ? 'Total spent' : `${targetScope} spending`}
+            </p>
             <p className="mt-1 text-3xl font-extrabold text-slate-900 tabular">{formatMoney(total)}</p>
             <p className="text-xs text-slate-500 mt-1">{monthEntries.length} entries in {monthLabel(month)}</p>
           </div>
@@ -88,17 +136,19 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
           </select>
         </div>
 
-        {bySource.length > 1 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {bySource.map(s => {
-              const meta = SOURCE_META[s.name as keyof typeof SOURCE_META] || SOURCE_META.Other;
+        {/* Target Domain Distribution */}
+        {targetScope === 'All' && byTarget.length > 1 && (
+          <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
+            {byTarget.map(t => {
+              const color = TARGET_COLORS[t.name] || '#64748b';
               return (
                 <span
-                  key={s.name}
-                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg"
-                  style={{ color: meta.color, backgroundColor: `${meta.color}14` }}
+                  key={t.name}
+                  className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5"
+                  style={{ borderColor: `${color}40`, backgroundColor: `${color}10`, color }}
                 >
-                  {meta.label} · {formatMoney(s.value)}
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                  {t.name}: {formatMoney(t.value)}
                 </span>
               );
             })}
@@ -170,7 +220,7 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
         {/* Top vendors */}
         <div className="card p-5">
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">
-            <Store className="w-3.5 h-3.5" /> Top vendors
+            <Store className="w-3.5 h-3.5" /> Top merchants & vendors
           </p>
           {byVendor.length === 0 ? (
             <p className="text-sm text-slate-400">No vendors yet.</p>
@@ -197,7 +247,7 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
             <div className="space-y-2">
               {byMember.map(m => (
                 <div key={m.name} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600 truncate mr-2">{m.name}</span>
+                  <span className="text-slate-700 truncate mr-2">{m.name}</span>
                   <span className="font-semibold text-slate-900 tabular">{formatMoney(m.value)}</span>
                 </div>
               ))}

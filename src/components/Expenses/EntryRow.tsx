@@ -2,7 +2,7 @@ import React from 'react';
 import { Lock } from 'lucide-react';
 import { getCategoryMeta, SOURCE_META } from '../../constants/categories';
 import { formatMoney } from '../../utils/transactions';
-import type { LedgerEntry } from '../../types';
+import type { ExpenseTarget, LedgerEntry } from '../../types';
 
 interface EntryRowProps {
   entry: LedgerEntry;
@@ -11,18 +11,19 @@ interface EntryRowProps {
   onView?: (entry: LedgerEntry) => void;
 }
 
-/**
- * One ledger line. Entries created by the sibling apps (HomeTracker,
- * CarTracker) show up read-only with their own badge — they are edited where
- * they were created, so tapping one opens a detail sheet that says so.
- */
 export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView }) => {
   const isExpense = entry.source === 'Expense';
-  const meta = getCategoryMeta(entry.label);
-  const sourceMeta = SOURCE_META[entry.source];
+  const meta = getCategoryMeta(entry.label, entry.target as ExpenseTarget);
+  const sourceMeta = SOURCE_META[entry.source] || SOURCE_META.Expense;
   const Icon = isExpense ? meta.icon : sourceMeta.icon;
   const color = isExpense ? meta.color : sourceMeta.color;
   const action = isExpense ? onEdit : onView;
+
+  const targetBadge = entry.target === 'Travel'
+    ? { text: 'Travel', bg: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300' }
+    : entry.target === 'Business'
+    ? { text: 'Business', bg: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300' }
+    : null;
 
   return (
     <button
@@ -41,7 +42,7 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView }) => 
       </span>
 
       <span className="flex-1 min-w-0">
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-semibold text-slate-900 truncate">{entry.vendor || 'Unknown vendor'}</span>
           {!isExpense && (
             <span
@@ -49,6 +50,16 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView }) => 
               style={{ color: sourceMeta.color, backgroundColor: `${sourceMeta.color}1a` }}
             >
               {sourceMeta.label}
+            </span>
+          )}
+          {isExpense && targetBadge && (
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${targetBadge.bg}`}>
+              {targetBadge.text}
+            </span>
+          )}
+          {entry.targetEntityLabel && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 truncate max-w-[120px]">
+              {entry.targetEntityLabel}
             </span>
           )}
           {entry.amount < 0 && (

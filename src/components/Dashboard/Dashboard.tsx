@@ -1,21 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ArrowRight, TrendingDown, TrendingUp, Plus, Users } from 'lucide-react';
 import { EntryRow } from '../Expenses/EntryRow';
-import { CATEGORY_META, getCategoryMeta } from '../../constants/categories';
+import { CATEGORIES_BY_TARGET, getCategoryMeta } from '../../constants/categories';
 import { currentMonthKey, formatMoney, monthKey, monthLabel, recentMonthKeys, todayISO } from '../../utils/transactions';
-import type { ExpenseCategory, LedgerEntry } from '../../types';
+import type { ExpenseTarget, LedgerEntry } from '../../types';
 
 interface DashboardProps {
   entries: LedgerEntry[];
   memberName: string;
   familyCode: string;
-  onQuickAdd: (category?: ExpenseCategory) => void;
+  onQuickAdd: (category?: string, target?: ExpenseTarget) => void;
   onViewAll: () => void;
   onEditEntry: (entry: LedgerEntry) => void;
   onViewEntry: (entry: LedgerEntry) => void;
 }
-
-const QUICK_CATEGORIES: ExpenseCategory[] = ['Grocery', 'Food & Dining', 'Transportation', 'Shopping'];
 
 export const Dashboard: React.FC<DashboardProps> = ({
   entries,
@@ -28,6 +26,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const thisMonth = currentMonthKey();
   const lastMonth = recentMonthKeys(2)[1];
+  const [selectedTarget, setSelectedTarget] = useState<ExpenseTarget>('Family');
 
   const stats = useMemo(() => {
     const inMonth = entries.filter(e => monthKey(e.date) === thisMonth);
@@ -37,6 +36,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const today = todayISO();
     const todayTotal = entries.filter(e => e.date === today).reduce((sum, e) => sum + e.amount, 0);
     const dayOfMonth = Number(today.slice(8, 10)) || 1;
+
+    // Target breakdown
+    const byTarget = new Map<string, number>();
+    inMonth.forEach(e => {
+      const t = e.target || 'Family';
+      byTarget.set(t, (byTarget.get(t) || 0) + e.amount);
+    });
 
     const byCategory = new Map<string, number>();
     inMonth.forEach(e => byCategory.set(e.label, (byCategory.get(e.label) || 0) + e.amount));
@@ -54,6 +60,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       todayTotal,
       dailyAverage: total / dayOfMonth,
       topCategories,
+      byTarget: Array.from(byTarget.entries()),
       byMember: Array.from(byMember.entries()).sort((a, b) => b[1] - a[1])
     };
   }, [entries, thisMonth, lastMonth]);
@@ -62,6 +69,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const isUp = delta > 0;
   const recent = entries.slice(0, 6);
   const maxCategory = stats.topCategories[0]?.[1] || 1;
+
+  const quickCategories = CATEGORIES_BY_TARGET[selectedTarget].slice(0, 4);
 
   return (
     <section className="space-y-4">
@@ -86,6 +95,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
 
+        {/* Domain mini totals */}
+        {stats.byTarget.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {stats.byTarget.map(([targetName, amt]) => {
+              const isTravel = targetName === 'Travel';
+              const isBusiness = targetName === 'Business';
+              const colorCls = isTravel
+                ? 'bg-sky-50 text-sky-700 border-sky-200'
+                : isBusiness
+                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+              return (
+                <span key={targetName} className={`text-xs font-semibold px-2.5 py-1 rounded-lg border ${colorCls}`}>
+                  {targetName}: {formatMoney(amt)}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         <div className="mt-5 grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-slate-50 px-3.5 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Today</p>
@@ -98,32 +127,52 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Quick add */}
+      {/* Quick Add with Domain Switcher */}
       <div className="card p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">Quick add</p>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Quick add</p>
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+            {(['Family', 'Travel', 'Business'] as ExpenseTarget[]).map(t => {
+              const isActive = selectedTarget === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setSelectedTarget(t)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                    isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid grid-cols-4 gap-2">
-          {QUICK_CATEGORIES.map(category => {
-            const { icon: Icon, color } = getCategoryMeta(category);
+          {quickCategories.map(cat => {
+            const Icon = cat.icon;
             return (
               <button
-                key={category}
-                onClick={() => onQuickAdd(category)}
+                key={cat.id}
+                onClick={() => onQuickAdd(cat.id, selectedTarget)}
                 className="flex flex-col items-center gap-1.5 px-1 py-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors"
               >
-                <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}1a` }}>
-                  <Icon className="w-4.5 h-4.5" style={{ color }} />
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${cat.color}1a` }}>
+                  <Icon className="w-4.5 h-4.5" style={{ color: cat.color }} />
                 </span>
-                <span className="text-[11px] font-semibold text-slate-600 text-center leading-tight">{category}</span>
+                <span className="text-[11px] font-semibold text-slate-600 text-center leading-tight truncate w-full px-1">{cat.name}</span>
               </button>
             );
           })}
         </div>
+
         <button
-          onClick={() => onQuickAdd()}
+          onClick={() => onQuickAdd(undefined, selectedTarget)}
           className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Log an expense as {memberName}
+          Log a {selectedTarget} expense as {memberName}
         </button>
       </div>
 
@@ -135,16 +184,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         ) : (
           <div className="space-y-3">
             {stats.topCategories.map(([label, amount]) => {
-              const { color } = getCategoryMeta(label);
-              const meta = CATEGORY_META.find(c => c.id === label);
-              const Icon = meta?.icon;
+              const meta = getCategoryMeta(label);
+              const Icon = meta.icon;
+              const color = meta.color;
               return (
                 <div key={label} className="flex items-center gap-3">
-                  {Icon && (
-                    <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}1a` }}>
-                      <Icon className="w-3.5 h-3.5" style={{ color }} />
-                    </span>
-                  )}
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}1a` }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color }} />
+                  </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-xs font-semibold text-slate-700 truncate">{label}</span>

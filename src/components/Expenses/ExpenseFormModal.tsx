@@ -1,8 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Trash2, Store, Settings2 } from 'lucide-react';
-import { CATEGORY_META, PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES, getCategoryMeta } from '../../constants/categories';
+import { X, Trash2, Store, Settings2, Plane, Plus, Building2 } from 'lucide-react';
+import {
+  CATEGORIES_BY_TARGET,
+  PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES,
+  TARGET_META,
+  getCategoryMeta
+} from '../../constants/categories';
 import { toExpenseCategory, toExpenseSubcategory, todayISO, nowTime } from '../../utils/transactions';
-import type { AssociableHome, AssociableVehicle, AssociationTarget, ExpenseCategory, ExpenseDraft, LedgerEntry, PaymentType, PaymentTypeItem } from '../../types';
+import type {
+  AssociableHome,
+  AssociableVehicle,
+  AssociationTarget,
+  ExpenseDraft,
+  ExpenseTarget,
+  LedgerEntry,
+  Office,
+  PaymentType,
+  PaymentTypeItem,
+  Trip
+} from '../../types';
 
 interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -16,12 +32,18 @@ interface ExpenseFormModalProps {
   members: string[];
   currentUser: string;
   /** Preselected category when opened from a quick-add tile. */
-  presetCategory?: ExpenseCategory;
+  presetCategory?: string;
+  presetTarget?: ExpenseTarget;
   /** Custom household payment types. */
   paymentTypes?: PaymentTypeItem[];
   /** Callback to open payment types management modal. */
   onManagePaymentTypes?: () => void;
-  /** Vehicles/homes from the sibling apps, for the "move to" picker. */
+  /** Trips and Offices from the family/statements collections. */
+  trips?: Trip[];
+  offices?: Office[];
+  onSaveTrip?: (trip: Trip) => Promise<void> | void;
+  onSaveOffice?: (office: Office) => Promise<void> | void;
+  /** Vehicles/homes from sibling apps for the "move to" picker. */
   vehicles?: AssociableVehicle[];
   homes?: AssociableHome[];
   defaultVehicleId?: string;
@@ -30,17 +52,25 @@ interface ExpenseFormModalProps {
   onAssociate?: (target: AssociationTarget) => void;
 }
 
-const emptyDraft = (currentUser: string, defaultPayment: string = 'Cash', category: ExpenseCategory = 'Grocery'): ExpenseDraft => ({
+const emptyDraft = (
+  currentUser: string,
+  defaultPayment: string = 'Cash',
+  target: ExpenseTarget = 'Family',
+  category: string = 'Food & Groceries'
+): ExpenseDraft => ({
   date: todayISO(),
   time: nowTime(),
   amount: 0,
   vendor: '',
   notes: '',
+  target,
+  targetEntityId: undefined,
+  targetEntityLabel: undefined,
   category,
   subcategory: '',
   paymentType: defaultPayment,
   user: currentUser,
-  isTaxDeductible: false
+  isTaxDeductible: target === 'Business'
 });
 
 export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
@@ -53,8 +83,13 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   members,
   currentUser,
   presetCategory,
+  presetTarget,
   paymentTypes = [],
   onManagePaymentTypes,
+  trips = [],
+  offices = [],
+  onSaveTrip,
+  onSaveOffice,
   vehicles = [],
   homes = [],
   defaultVehicleId,
@@ -68,11 +103,13 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   }, [paymentTypes]);
 
   const defaultPaymentType = availablePaymentTypes[0] || 'Cash';
-  const [draft, setDraft] = useState<ExpenseDraft>(() => emptyDraft(currentUser, defaultPaymentType));
+  const [draft, setDraft] = useState<ExpenseDraft>(() => emptyDraft(currentUser, defaultPaymentType, presetTarget || 'Family'));
   const [amountText, setAmountText] = useState('');
   const [error, setError] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [selectedHomeId, setSelectedHomeId] = useState('');
+  const [newEntityPrompt, setNewEntityPrompt] = useState<'trip' | 'office' | null>(null);
+  const [newEntityName, setNewEntityName] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -83,7 +120,11 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     if (initialEntry) {
-      const category = toExpenseCategory(initialEntry.label);
+      let target: ExpenseTarget = 'Family';
+      if (initialEntry.target === 'Travel' || initialEntry.source === 'Travel') target = 'Travel';
+      else if (initialEntry.target === 'Business' || initialEntry.source === 'Business') target = 'Business';
+
+      const category = toExpenseCategory(initialEntry.label, target);
       setDraft({
         id: initialEntry.id,
         date: initialEntry.date,
@@ -91,19 +132,26 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         amount: initialEntry.amount,
         vendor: initialEntry.vendor,
         notes: initialEntry.notes || '',
-        category,
-        subcategory: toExpenseSubcategory(category, initialEntry.detail),
+        target,
+        targetEntityId: initialEntry.targetEntityId,
+        targetEntityLabel: initialEntry.targetEntityLabel,
+        category: category || (target === 'Travel' ? 'Transportation' : target === 'Business' ? 'Office & Supplies' : 'Food & Groceries'),
+        subcategory: toExpenseSubcategory(target, category, initialEntry.detail),
         paymentType: initialEntry.paymentType,
         user: initialEntry.user || currentUser,
-        isTaxDeductible: initialEntry.isTaxDeductible ?? false
+        isTaxDeductible: initialEntry.isTaxDeductible ?? (target === 'Business')
       });
       setAmountText(initialEntry.amount ? String(initialEntry.amount) : '');
     } else {
-      setDraft(emptyDraft(currentUser, defaultPaymentType, presetCategory));
+      const target = presetTarget || 'Family';
+      const defaultCat = presetCategory || (target === 'Travel' ? 'Transportation' : target === 'Business' ? 'Office & Supplies' : 'Food & Groceries');
+      setDraft(emptyDraft(currentUser, defaultPaymentType, target, defaultCat));
       setAmountText('');
     }
     setError('');
-  }, [isOpen, initialEntry, currentUser, presetCategory, defaultPaymentType]);
+    setNewEntityPrompt(null);
+    setNewEntityName('');
+  }, [isOpen, initialEntry, currentUser, presetCategory, presetTarget, defaultPaymentType]);
 
   const memberOptions = useMemo(() => {
     const all = [currentUser, ...members, draft.user].filter(Boolean);
@@ -112,8 +160,48 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
 
   if (!isOpen) return null;
 
-  const activeMeta = getCategoryMeta(draft.category);
+  const currentCategories = CATEGORIES_BY_TARGET[draft.target] || CATEGORIES_BY_TARGET.Family;
+  const activeMeta = getCategoryMeta(draft.category, draft.target);
   const isRefund = amountText.trim().startsWith('-');
+
+  const handleTargetChange = (newTarget: ExpenseTarget) => {
+    const targetCats = CATEGORIES_BY_TARGET[newTarget];
+    const defaultCat = targetCats[0]?.id || 'Other';
+    setDraft(d => ({
+      ...d,
+      target: newTarget,
+      category: defaultCat,
+      subcategory: '',
+      targetEntityId: undefined,
+      targetEntityLabel: undefined,
+      isTaxDeductible: newTarget === 'Business' ? true : d.isTaxDeductible
+    }));
+  };
+
+  const handleCreateQuickEntity = async () => {
+    if (!newEntityName.trim()) return;
+    const name = newEntityName.trim();
+    if (newEntityPrompt === 'trip') {
+      const newTrip: Trip = {
+        id: `trip-${Date.now()}`,
+        name,
+        startDate: todayISO(),
+        destinations: []
+      };
+      if (onSaveTrip) await onSaveTrip(newTrip);
+      setDraft(d => ({ ...d, targetEntityId: newTrip.id, targetEntityLabel: newTrip.name }));
+    } else if (newEntityPrompt === 'office') {
+      const newOffice: Office = {
+        id: `office-${Date.now()}`,
+        name,
+        officeType: 'General Workspace'
+      };
+      if (onSaveOffice) await onSaveOffice(newOffice);
+      setDraft(d => ({ ...d, targetEntityId: newOffice.id, targetEntityLabel: newOffice.name }));
+    }
+    setNewEntityPrompt(null);
+    setNewEntityName('');
+  };
 
   const toggleRefund = () => {
     setAmountText(text => {
@@ -132,7 +220,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       return;
     }
     if (!draft.vendor.trim()) {
-      setError('Enter the store, restaurant or shop.');
+      setError('Enter the store, restaurant or merchant.');
       return;
     }
     onSave({ ...draft, amount: Math.round(amount * 100) / 100, vendor: draft.vendor.trim() });
@@ -142,6 +230,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 sm:p-4 no-print">
       <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[92vh] flex flex-col">
 
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <h2 className="text-base font-bold text-slate-900">
             {initialEntry ? 'Edit expense' : 'New expense'}
@@ -152,6 +241,163 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+
+          {/* Domain Target Selector Pills */}
+          <div>
+            <span className="field-label">Expense Domain</span>
+            <div className="grid grid-cols-3 gap-2">
+              {(['Family', 'Travel', 'Business'] as ExpenseTarget[]).map(t => {
+                const meta = TARGET_META[t];
+                const Icon = meta.icon;
+                const isActive = draft.target === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => handleTargetChange(t)}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold border transition-all ${
+                      isActive
+                        ? `${meta.badgeBg} ${meta.badgeBorder} border-2 shadow-sm`
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{t}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">{TARGET_META[draft.target].description}</p>
+          </div>
+
+          {/* Entity Association for Travel (Trips) or Business (Offices) */}
+          {draft.target === 'Travel' && (
+            <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                  <Plane className="w-3.5 h-3.5 text-sky-600" />
+                  Link to Trip <span className="font-normal text-sky-600">· optional</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setNewEntityPrompt(newEntityPrompt === 'trip' ? null : 'trip')}
+                  className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 flex items-center gap-0.5"
+                >
+                  <Plus className="w-3 h-3" /> New Trip
+                </button>
+              </div>
+
+              {newEntityPrompt === 'trip' ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newEntityName}
+                    onChange={e => setNewEntityName(e.target.value)}
+                    placeholder="e.g. Summer in Italy"
+                    className="field flex-1 text-xs py-1.5 bg-white"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateQuickEntity}
+                    className="px-3 py-1.5 bg-sky-600 text-white text-xs font-bold rounded-lg hover:bg-sky-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewEntityPrompt(null)}
+                    className="px-2 py-1.5 text-slate-500 text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={draft.targetEntityId || ''}
+                  onChange={e => {
+                    const id = e.target.value;
+                    const trip = trips.find(t => t.id === id);
+                    setDraft(d => ({
+                      ...d,
+                      targetEntityId: id || undefined,
+                      targetEntityLabel: trip?.name || undefined
+                    }));
+                  }}
+                  className="field text-xs py-1.5 bg-white"
+                >
+                  <option value="">No specific trip (General Travel)</option>
+                  {trips.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} {t.startDate ? `(${t.startDate})` : ''}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {draft.target === 'Business' && (
+            <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                  Link to Office / Business <span className="font-normal text-indigo-600">· optional</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setNewEntityPrompt(newEntityPrompt === 'office' ? null : 'office')}
+                  className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 flex items-center gap-0.5"
+                >
+                  <Plus className="w-3 h-3" /> New Office
+                </button>
+              </div>
+
+              {newEntityPrompt === 'office' ? (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newEntityName}
+                    onChange={e => setNewEntityName(e.target.value)}
+                    placeholder="e.g. Downtown HQ or Consulting LLC"
+                    className="field flex-1 text-xs py-1.5 bg-white"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateQuickEntity}
+                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewEntityPrompt(null)}
+                    className="px-2 py-1.5 text-slate-500 text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={draft.targetEntityId || ''}
+                  onChange={e => {
+                    const id = e.target.value;
+                    const office = offices.find(o => o.id === id);
+                    setDraft(d => ({
+                      ...d,
+                      targetEntityId: id || undefined,
+                      targetEntityLabel: office?.name || undefined
+                    }));
+                  }}
+                  className="field text-xs py-1.5 bg-white"
+                >
+                  <option value="">General Business (No specific office)</option>
+                  {offices.map(o => (
+                    <option key={o.id} value={o.id}>{o.name} {o.officeType ? `· ${o.officeType}` : ''}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
 
           {/* Amount */}
           <div>
@@ -167,7 +413,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Refund
+                Refund / Credit
               </button>
             </div>
             <div className="relative">
@@ -184,20 +430,20 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 className="field tabular text-3xl font-bold py-3 pl-10"
               />
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">Use a negative amount to log a refund.</p>
+            <p className="mt-2 text-[11px] text-slate-400">Use a negative amount or toggle Refund to log a refund or reimbursement.</p>
           </div>
 
           {/* Category */}
           <div>
-            <span className="field-label">Category</span>
+            <span className="field-label">{draft.target} Category</span>
             <div className="flex flex-wrap gap-1.5">
-              {CATEGORY_META.map(({ id, icon: Icon, color }) => {
-                const isActive = draft.category === id;
+              {currentCategories.map(({ id, name, icon: Icon, color }) => {
+                const isActive = draft.category.toLowerCase() === id.toLowerCase() || draft.category.toLowerCase() === name.toLowerCase();
                 return (
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setDraft(d => ({ ...d, category: id as ExpenseCategory, subcategory: '' }))}
+                    onClick={() => setDraft(d => ({ ...d, category: id, subcategory: '' }))}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                       isActive
                         ? 'text-white border-transparent'
@@ -206,15 +452,15 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                     style={isActive ? { backgroundColor: color } : undefined}
                   >
                     <Icon className="w-3.5 h-3.5" style={isActive ? undefined : { color }} />
-                    {id}
+                    {name}
                   </button>
                 );
               })}
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">{activeMeta.hint}</p>
+            {activeMeta.hint && <p className="mt-2 text-[11px] text-slate-400">{activeMeta.hint}</p>}
           </div>
 
-          {/* Subcategory — optional; tapping the active one clears it */}
+          {/* Subcategory — optional; tapping active clears */}
           {activeMeta.subcategories.length > 0 && (
             <div>
               <span className="field-label">
@@ -222,7 +468,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {activeMeta.subcategories.map(sub => {
-                  const isActive = draft.subcategory === sub;
+                  const isActive = draft.subcategory.toLowerCase() === sub.toLowerCase();
                   return (
                     <button
                       key={sub}
@@ -246,7 +492,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
 
           {/* Vendor */}
           <div>
-            <label className="field-label" htmlFor="vendor">Store, restaurant or shop</label>
+            <label className="field-label" htmlFor="vendor">Merchant, Store or Vendor</label>
             <div className="relative">
               <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -254,7 +500,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 list="vendor-suggestions"
                 value={draft.vendor}
                 onChange={e => setDraft(d => ({ ...d, vendor: e.target.value }))}
-                placeholder="e.g. Costco, Pho Saigon, Amazon"
+                placeholder="e.g. Delta Air Lines, Hilton, Costco, Amazon, Cursor AI"
                 className="field pl-9"
               />
             </div>
@@ -345,9 +591,10 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               onChange={e => setDraft(d => ({ ...d, isTaxDeductible: e.target.checked }))}
               className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
             />
-            Tax deductible
+            <span>Tax deductible {draft.target === 'Business' && <span className="text-xs text-indigo-600 font-semibold">(Default for Business)</span>}</span>
           </label>
 
+          {/* Cross-app move to vehicle / home */}
           {initialEntry && (vehicles.length > 0 || homes.length > 0) && (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2.5">
               <p className="text-xs font-semibold text-slate-500">Not a general expense? Move it to:</p>
