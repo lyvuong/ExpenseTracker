@@ -370,29 +370,84 @@ export const exportEntriesAsCSV = (entries: LedgerEntry[]): void => {
   );
 };
 
-export const exportTransactionsAsJSON = (transactions: Transaction[]): void => {
-  const backup = {
-    version: '2.1',
+export const exportDataAsJSON = (
+  transactions: Transaction[],
+  trips: Trip[] = [],
+  offices: Office[] = [],
+  familyMembers: FamilyMember[] = [],
+  paymentTypes: PaymentTypeItem[] = [],
+  taxonomyOverrideDoc: TaxonomyOverrideDoc = {}
+): void => {
+  const backupObj = {
+    version: '2.0',
     app: 'FinanceTracker',
     exportDate: new Date().toISOString(),
     total: formatMoney(transactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0)),
-    transactions
+    transactions,
+    trips,
+    offices,
+    familyMembers,
+    paymentTypes,
+    taxonomyOverrideDoc
   };
   downloadBlob(
-    new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }),
+    new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' }),
     `FinanceTracker_Backup_${new Date().toISOString().split('T')[0]}.json`
   );
 };
 
-export const importJSONBackup = (jsonString: string): Transaction[] => {
+export const exportTransactionsAsJSON = (transactions: Transaction[]): void => {
+  exportDataAsJSON(
+    transactions,
+    loadLocalTrips(),
+    loadLocalOffices(),
+    loadLocalFamilyMembers(),
+    loadLocalPaymentTypes(),
+    loadLocalTaxonomyOverride()
+  );
+};
+
+export interface ImportedDataResult {
+  transactions: Transaction[];
+  trips: Trip[];
+  offices: Office[];
+  familyMembers: FamilyMember[];
+  paymentTypes: PaymentTypeItem[];
+  taxonomyOverrideDoc: TaxonomyOverrideDoc;
+}
+
+export const importJSONBackup = (jsonString: string): ImportedDataResult => {
   try {
     const data = JSON.parse(jsonString);
-    const transactions: Transaction[] = data.transactions || [];
-    if (!Array.isArray(transactions)) {
-      throw new Error('Invalid JSON backup file structure.');
+    if (!data.transactions || !Array.isArray(data.transactions)) {
+      throw new Error('Invalid JSON backup file structure: missing transactions array.');
     }
+    const transactions: Transaction[] = data.transactions;
+    const trips: Trip[] = Array.isArray(data.trips) ? data.trips : loadLocalTrips();
+    const offices: Office[] = Array.isArray(data.offices) ? data.offices : loadLocalOffices();
+    const familyMembers: FamilyMember[] = Array.isArray(data.familyMembers) ? data.familyMembers : loadLocalFamilyMembers();
+    const paymentTypes: PaymentTypeItem[] = Array.isArray(data.paymentTypes) && data.paymentTypes.length > 0
+      ? data.paymentTypes
+      : loadLocalPaymentTypes();
+    const taxonomyOverrideDoc: TaxonomyOverrideDoc = data.taxonomyOverrideDoc && typeof data.taxonomyOverrideDoc === 'object'
+      ? data.taxonomyOverrideDoc
+      : loadLocalTaxonomyOverride();
+
     saveLocalTransactions(transactions);
-    return transactions;
+    if (Array.isArray(data.trips)) saveLocalTrips(trips);
+    if (Array.isArray(data.offices)) saveLocalOffices(offices);
+    if (Array.isArray(data.familyMembers)) saveLocalFamilyMembers(familyMembers);
+    if (Array.isArray(data.paymentTypes)) saveLocalPaymentTypes(paymentTypes);
+    if (data.taxonomyOverrideDoc) saveLocalTaxonomyOverride(undefined, taxonomyOverrideDoc);
+
+    return {
+      transactions,
+      trips,
+      offices,
+      familyMembers,
+      paymentTypes,
+      taxonomyOverrideDoc
+    };
   } catch (err: any) {
     throw new Error(err.message || 'Failed to parse JSON backup file.');
   }

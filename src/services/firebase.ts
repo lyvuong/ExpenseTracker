@@ -5,7 +5,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import {
@@ -115,6 +117,41 @@ export const loginWithGoogle = async (): Promise<UserProfile | null> => {
   };
 };
 
+export const tryAutoSignInGoogle = async (): Promise<UserProfile | null> => {
+  if (!auth) return null;
+  if (auth.currentUser) {
+    return {
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email,
+      displayName: auth.currentUser.displayName,
+      photoURL: auth.currentUser.photoURL
+    };
+  }
+  return null;
+};
+
+export const loginWithEmail = async (email: string, pass: string): Promise<UserProfile | null> => {
+  if (!auth) throw new Error('Firebase Auth is not configured.');
+  const res = await signInWithEmailAndPassword(auth, email, pass);
+  return {
+    uid: res.user.uid,
+    email: res.user.email,
+    displayName: res.user.displayName || email.split('@')[0],
+    photoURL: res.user.photoURL
+  };
+};
+
+export const registerWithEmail = async (email: string, pass: string): Promise<UserProfile | null> => {
+  if (!auth) throw new Error('Firebase Auth is not configured.');
+  const res = await createUserWithEmailAndPassword(auth, email, pass);
+  return {
+    uid: res.user.uid,
+    email: res.user.email,
+    displayName: email.split('@')[0],
+    photoURL: res.user.photoURL
+  };
+};
+
 export const logoutFirebase = async (): Promise<void> => {
   setStoredFamilyCode('');
   if (auth) {
@@ -205,6 +242,10 @@ export const subscribeFirestoreEntities = <T extends { id: string }>(
     callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as T)));
   }, (error) => {
     console.error(`[Firestore] ${collectionName} sync error:`, error);
+    if (error.code === 'permission-denied') {
+      console.warn(`[Firestore] Permission denied on ${collectionName}. Clearing invalid household code.`);
+      setStoredFamilyCode('');
+    }
   });
 };
 
@@ -219,8 +260,11 @@ export const saveFirestoreEntity = async <T extends { id: string }>(
     const target = getStorageTarget(userId, familyCode);
     const clean = JSON.parse(JSON.stringify(entity));
     await setDoc(doc(db, target.root, target.id, collectionName, entity.id), clean, { merge: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[Firestore] Error saving ${collectionName}:`, err);
+    if (err.code === 'permission-denied') {
+      setStoredFamilyCode('');
+    }
   }
 };
 
@@ -260,19 +304,21 @@ export const deleteFirestoreOffice = (userId: string, officeId: string, familyCo
 
 // ==========================================
 // Taxonomy Override (Custom Categories & Subcategories)
-// Stored at: households/{familyCode}/settings/taxonomy
+// Stored at: {target.root}/{target.id}/settings/taxonomy
 // Shape: { [target]: { categories: Record<string, string[]>, deleted: string[] } }
 // ==========================================
 
 export const subscribeFirestoreTaxonomyOverride = (
-  familyCode: string,
+  userId: string,
+  familyCode: string | undefined,
   callback: (data: TaxonomyOverrideDoc) => void
 ) => {
-  if (!db || !familyCode) {
+  if (!db) {
     callback(loadLocalTaxonomyOverride(familyCode));
     return () => {};
   }
-  const ref = doc(db, 'households', familyCode.trim().toUpperCase(), 'settings', 'taxonomy');
+  const target = getStorageTarget(userId, familyCode);
+  const ref = doc(db, target.root, target.id, 'settings', 'taxonomy');
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const data = snap.data() as TaxonomyOverrideDoc;
@@ -283,27 +329,34 @@ export const subscribeFirestoreTaxonomyOverride = (
     }
   }, (err) => {
     console.warn('[Firestore] Taxonomy override sync error:', err);
+    if (err.code === 'permission-denied') {
+      console.warn('[Firestore] Permission denied on taxonomy. Clearing invalid household code.');
+      setStoredFamilyCode('');
+    }
     callback(loadLocalTaxonomyOverride(familyCode));
   });
 };
 
 export const saveFirestoreTaxonomyOverride = async (
-  _userId: string,
+  userId: string,
   familyCode: string | undefined,
   target: string,
   override: TargetTaxonomyOverride
 ): Promise<void> => {
-  const code = (familyCode || getStoredFamilyCode() || '').trim().toUpperCase();
-  const current = loadLocalTaxonomyOverride(code);
+  const current = loadLocalTaxonomyOverride(familyCode);
   const updated: TaxonomyOverrideDoc = { ...current, [target]: override };
-  saveLocalTaxonomyOverride(code, updated);
+  saveLocalTaxonomyOverride(familyCode, updated);
 
-  if (!db || !code) return;
+  if (!db) return;
   try {
-    const ref = doc(db, 'households', code, 'settings', 'taxonomy');
+    const storageTarget = getStorageTarget(userId, familyCode);
+    const ref = doc(db, storageTarget.root, storageTarget.id, 'settings', 'taxonomy');
     await setDoc(ref, { [target]: JSON.parse(JSON.stringify(override)) }, { merge: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Firestore] Error saving taxonomy override:', err);
+    if (err.code === 'permission-denied') {
+      setStoredFamilyCode('');
+    }
   }
 };
 
@@ -525,6 +578,10 @@ export const subscribeFirestorePaymentTypes = (
     callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PaymentTypeItem)));
   }, (error) => {
     console.error('[Firestore] Payment types sync error:', error);
+    if (error.code === 'permission-denied') {
+      console.warn('[Firestore] Permission denied on payment_types. Clearing invalid household code.');
+      setStoredFamilyCode('');
+    }
   });
 };
 
@@ -539,8 +596,11 @@ export const saveFirestorePaymentType = async (
     const clean = JSON.parse(JSON.stringify(paymentType));
     await setDoc(doc(db, target.root, target.id, 'payment_types', paymentType.id), clean, { merge: true });
     console.log(`[Firestore] Payment type saved to ${target.root}/${target.id}:`, paymentType.name);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Firestore] Error saving payment type:', err);
+    if (err.code === 'permission-denied') {
+      setStoredFamilyCode('');
+    }
   }
 };
 

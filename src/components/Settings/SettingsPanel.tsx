@@ -27,7 +27,7 @@ interface SettingsPanelProps {
   onSetFamilyCode: (code: string) => Promise<{ success: boolean; message: string }>;
   onSignOut: () => void;
   onExportCSV: (entries: LedgerEntry[]) => void;
-  onExportJSON: (transactions: Transaction[]) => void;
+  onExportJSON: (transactions?: Transaction[]) => void;
   onImportJSON: (json: string) => void;
   onClearDemoData: () => void;
   onRestoreSampleData: () => void;

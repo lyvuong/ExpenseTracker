@@ -36,8 +36,8 @@ import {
   DEMO_PREFIX,
   INITIAL_PAYMENT_TYPES,
   clearDemoData,
+  exportDataAsJSON,
   exportEntriesAsCSV,
-  exportTransactionsAsJSON,
   getStoredFamilyCode,
   getStoredLastHomeId,
   getStoredLastVehicleId,
@@ -71,8 +71,10 @@ import {
   getVehiclesOnce,
   initializeFirebaseService,
   isFirebaseConfigured,
+  loginWithEmail,
   loginWithGoogle,
   logoutFirebase,
+  registerWithEmail,
   saveFirestoreEntity,
   saveFirestoreOffice,
   saveFirestorePaymentType,
@@ -242,7 +244,7 @@ export const App: React.FC = () => {
       });
 
       // 4. Taxonomy Overrides subscription
-      unsubTaxonomy = subscribeFirestoreTaxonomyOverride(familyCode, (doc) => {
+      unsubTaxonomy = subscribeFirestoreTaxonomyOverride(userProfile.uid, familyCode, (doc) => {
         setTaxonomyOverrideDoc(doc);
         saveLocalTaxonomyOverride(familyCode, doc);
       });
@@ -514,9 +516,24 @@ export const App: React.FC = () => {
 
   const handleImportJSON = (json: string) => {
     const imported = importJSONBackup(json);
-    setTransactions(imported);
+    setTransactions(imported.transactions);
+    setTrips(imported.trips);
+    setOffices(imported.offices);
+    setFamilyMembers(imported.familyMembers);
+    setPaymentTypes(imported.paymentTypes);
+    setTaxonomyOverrideDoc(imported.taxonomyOverrideDoc);
+
     if (user && isFirebaseActive) {
-      imported.forEach(t => saveFirestoreTransaction(user.uid, t, familyCode));
+      imported.transactions.forEach(t => saveFirestoreTransaction(user.uid, t, familyCode));
+      imported.trips.forEach(tr => saveFirestoreTrip(user.uid, tr, familyCode));
+      imported.offices.forEach(o => saveFirestoreOffice(user.uid, o, familyCode));
+      imported.familyMembers.forEach(f => saveFirestoreEntity(user.uid, 'family', f, familyCode));
+      imported.paymentTypes.forEach(pt => saveFirestorePaymentType(user.uid, pt, familyCode));
+      Object.entries(imported.taxonomyOverrideDoc).forEach(([target, override]) => {
+        if (override) {
+          saveFirestoreTaxonomyOverride(user.uid, familyCode, target, override);
+        }
+      });
     }
   };
 
@@ -548,7 +565,13 @@ export const App: React.FC = () => {
   }
 
   if (isFirebaseActive && !user) {
-    return <LoginScreen onGoogleSignIn={loginWithGoogle} />;
+    return (
+      <LoginScreen
+        onGoogleSignIn={loginWithGoogle}
+        onEmailSignIn={loginWithEmail}
+        onEmailRegister={registerWithEmail}
+      />
+    );
   }
 
   return (
@@ -603,7 +626,7 @@ export const App: React.FC = () => {
             onSetFamilyCode={handleSetFamilyCode}
             onSignOut={handleSignOut}
             onExportCSV={exportEntriesAsCSV}
-            onExportJSON={exportTransactionsAsJSON}
+            onExportJSON={() => exportDataAsJSON(transactions, trips, offices, familyMembers, paymentTypes, taxonomyOverrideDoc)}
             onImportJSON={handleImportJSON}
             onClearDemoData={handleClearDemoData}
             onRestoreSampleData={handleRestoreSampleData}
