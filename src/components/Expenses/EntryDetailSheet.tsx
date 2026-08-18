@@ -101,20 +101,20 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
               isRefund: entry.amount < 0
             });
             return (
-              <div className={`mt-4 p-3 rounded-xl border text-xs flex items-start gap-2.5 ${taxContext.badgeStyle.bg} ${taxContext.badgeStyle.border}`}>
-                <div className="h-5 w-5 rounded-md bg-indigo-500/15 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+              <div className={`mt-4 p-3.5 rounded-xl border shadow-xs text-xs flex items-start gap-3 ${taxContext.badgeStyle.bg} ${taxContext.badgeStyle.border}`}>
+                <div className={`h-6 w-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 shadow-xs ${taxContext.badgeStyle.iconBg || 'bg-slate-700 text-white'}`}>
                   <Landmark className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-slate-900">{taxContext.headline}</span>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">{taxContext.headline}</span>
                     {taxContext.scheduleOrForm && (
-                      <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold border bg-white/80 ${taxContext.badgeStyle.text} ${taxContext.badgeStyle.border}`}>
+                      <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold border shadow-2xs bg-white dark:bg-slate-900 ${taxContext.badgeStyle.text} ${taxContext.badgeStyle.border}`}>
                         {taxContext.scheduleOrForm}
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-600 mt-1 leading-relaxed">{taxContext.purpose}</p>
+                  <p className="text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{taxContext.purpose}</p>
                 </div>
               </div>
             );

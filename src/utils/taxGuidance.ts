@@ -1240,6 +1240,7 @@ export interface ResolvedTransactionTaxContext {
     bg: string;
     border: string;
     text: string;
+    iconBg?: string;
   };
   headline: string;
 }
@@ -1266,9 +1267,10 @@ export const getResolvedTransactionTaxGuidance = (params?: {
         scheduleOrForm: 'Form 1040 / Schedule C',
         deductibleStatus: 'taxable-income',
         badgeStyle: {
-          bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-          border: 'border-emerald-200 dark:border-emerald-800',
-          text: 'text-emerald-700 dark:text-emerald-300'
+          bg: 'bg-teal-50 dark:bg-teal-950/40',
+          border: 'border-teal-300 dark:border-teal-600',
+          text: 'text-teal-950 dark:text-teal-200',
+          iconBg: 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950'
         }
       };
     }
@@ -1281,8 +1283,9 @@ export const getResolvedTransactionTaxGuidance = (params?: {
         deductibleStatus: 'deductible',
         badgeStyle: {
           bg: 'bg-indigo-50 dark:bg-indigo-950/40',
-          border: 'border-indigo-200 dark:border-indigo-800',
-          text: 'text-indigo-700 dark:text-indigo-300'
+          border: 'border-indigo-300 dark:border-indigo-600',
+          text: 'text-indigo-950 dark:text-indigo-200',
+          iconBg: 'bg-indigo-600 text-white dark:bg-indigo-500 dark:text-slate-950'
         }
       };
     }
@@ -1294,8 +1297,9 @@ export const getResolvedTransactionTaxGuidance = (params?: {
       deductibleStatus: 'non-deductible',
       badgeStyle: {
         bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-        border: 'border-emerald-200 dark:border-emerald-800',
-        text: 'text-emerald-700 dark:text-emerald-300'
+        border: 'border-emerald-300 dark:border-emerald-600',
+        text: 'text-emerald-950 dark:text-emerald-200',
+        iconBg: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950'
       }
     };
   }
@@ -1308,52 +1312,59 @@ export const getResolvedTransactionTaxGuidance = (params?: {
   if (guidance) {
     let headline = 'Tax Treatment';
     let badgeStyle = {
-      bg: 'bg-slate-100 dark:bg-slate-800',
-      border: 'border-slate-300 dark:border-slate-700',
-      text: 'text-slate-700 dark:text-slate-300'
+      bg: 'bg-slate-50 dark:bg-slate-800/90',
+      border: 'border-slate-300 dark:border-slate-600',
+      text: 'text-slate-900 dark:text-slate-100',
+      iconBg: 'bg-slate-700 text-white dark:bg-slate-600 dark:text-white'
     };
 
     if (guidance.deductibleStatus === 'deductible') {
       headline = '100% Tax Deductible';
       badgeStyle = {
         bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-        border: 'border-emerald-300 dark:border-emerald-700',
-        text: 'text-emerald-700 dark:text-emerald-300'
+        border: 'border-emerald-300 dark:border-emerald-600',
+        text: 'text-emerald-900 dark:text-emerald-200',
+        iconBg: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950'
       };
     } else if (guidance.deductibleStatus === 'partial') {
       headline = 'Partially Deductible / Conditional';
       badgeStyle = {
         bg: 'bg-amber-50 dark:bg-amber-950/40',
-        border: 'border-amber-300 dark:border-amber-700',
-        text: 'text-amber-700 dark:text-amber-300'
+        border: 'border-amber-300 dark:border-amber-600',
+        text: 'text-amber-950 dark:text-amber-200',
+        iconBg: 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-950'
       };
     } else if (guidance.deductibleStatus === 'capitalized') {
       headline = 'Capitalized / Depreciable Basis';
       badgeStyle = {
         bg: 'bg-blue-50 dark:bg-blue-950/40',
-        border: 'border-blue-300 dark:border-blue-700',
-        text: 'text-blue-700 dark:text-blue-300'
+        border: 'border-blue-300 dark:border-blue-600',
+        text: 'text-blue-950 dark:text-blue-200',
+        iconBg: 'bg-blue-600 text-white dark:bg-blue-500 dark:text-slate-950'
       };
     } else if (guidance.deductibleStatus === 'tax-credit') {
       headline = 'Tax Credit Eligible';
       badgeStyle = {
         bg: 'bg-purple-50 dark:bg-purple-950/40',
-        border: 'border-purple-300 dark:border-purple-700',
-        text: 'text-purple-700 dark:text-purple-300'
+        border: 'border-purple-300 dark:border-purple-600',
+        text: 'text-purple-950 dark:text-purple-200',
+        iconBg: 'bg-purple-600 text-white dark:bg-purple-500 dark:text-slate-950'
       };
     } else if (guidance.deductibleStatus === 'taxable-income') {
       headline = 'Taxable Inflow';
       badgeStyle = {
         bg: 'bg-teal-50 dark:bg-teal-950/40',
-        border: 'border-teal-300 dark:border-teal-700',
-        text: 'text-teal-700 dark:text-teal-300'
+        border: 'border-teal-300 dark:border-teal-600',
+        text: 'text-teal-950 dark:text-teal-200',
+        iconBg: 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950'
       };
     } else {
       headline = 'Non-Deductible Personal Expense';
       badgeStyle = {
-        bg: 'bg-slate-100 dark:bg-slate-800',
-        border: 'border-slate-300 dark:border-slate-700',
-        text: 'text-slate-600 dark:text-slate-400'
+        bg: 'bg-slate-50 dark:bg-slate-800/90',
+        border: 'border-slate-300 dark:border-slate-600',
+        text: 'text-slate-900 dark:text-slate-100',
+        iconBg: 'bg-slate-700 text-white dark:bg-slate-600 dark:text-white'
       };
     }
 
@@ -1375,8 +1386,9 @@ export const getResolvedTransactionTaxGuidance = (params?: {
       deductibleStatus: 'deductible',
       badgeStyle: {
         bg: 'bg-indigo-50 dark:bg-indigo-950/40',
-        border: 'border-indigo-300 dark:border-indigo-700',
-        text: 'text-indigo-700 dark:text-indigo-300'
+        border: 'border-indigo-300 dark:border-indigo-600',
+        text: 'text-indigo-950 dark:text-indigo-200',
+        iconBg: 'bg-indigo-600 text-white dark:bg-indigo-500 dark:text-slate-950'
       }
     };
   }
@@ -1387,9 +1399,10 @@ export const getResolvedTransactionTaxGuidance = (params?: {
     scheduleOrForm: 'Non-deductible',
     deductibleStatus: 'non-deductible',
     badgeStyle: {
-      bg: 'bg-slate-100 dark:bg-slate-800',
-      border: 'border-slate-300 dark:border-slate-700',
-      text: 'text-slate-600 dark:text-slate-400'
+      bg: 'bg-slate-50 dark:bg-slate-800/90',
+      border: 'border-slate-300 dark:border-slate-600',
+      text: 'text-slate-900 dark:text-slate-100',
+      iconBg: 'bg-slate-700 text-white dark:bg-slate-600 dark:text-white'
     }
   };
 };
