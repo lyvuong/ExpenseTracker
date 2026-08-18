@@ -101,23 +101,18 @@ ExpenseTracker supports 3 primary expense domains with dedicated category taxono
 ### 👨‍👩‍👧‍👦 Family & Household Taxonomy
 | Category | Subcategories |
 | :--- | :--- |
-| **Food & Groceries** | Groceries · Supermarket · Restaurants · Coffee Shops · Takeout & Delivery · Alcohol & Bars · Bakery & Snacks |
+| **Income** | Salary & Wages · Bonus & Commission · Freelance & Side Income · Investment & Dividends · Rental Income · Tax Refund · Reimbursement · Gifts Received · Unemployment Benefits |
 | **Health & Wellness** | Doctor Visits · Dental Care · Vision Care · Pharmacy & Prescriptions · Gym & Fitness · Therapy & Counseling |
-| **Personal Care** | Haircuts & Salon · Spa & Massage · Cosmetics & Toiletries · Nails |
-| **Shopping** | Clothing & Apparel · Shoes & Footwear · Accessories & Jewelry · Electronics & Gadgets · Home & Furniture · General Merchandise |
-| **Digital & Tech** | Domains & Hosting · Software & Apps · AI & Dev Tools · Cloud & Storage · Online Services · Devices & Accessories |
-| **Entertainment & Leisure** | Movies & Streaming · Concerts & Events · Hobbies · Books & Magazines · Video Games · Sports & Recreation |
-| **Education** | Tuition · Student Loans · Books & Supplies · Courses & Certifications · School Fees · Tutoring |
-| **Family & Childcare** | Childcare & Daycare · Kids Activities · School & Camps · Toys & Gear · Elder Care |
-| **Pets** | Food & Treats · Vet & Healthcare · Grooming · Pet Supplies · Boarding & Sitting · Medication |
-| **Household Supplies** | Cleaning · Paper Goods · Kitchen · Laundry · Storage & Organization · Tools & Hardware |
-| **Subscriptions & Memberships** | Streaming & Media · Music & Audio · Cloud Storage & Software · News & Publications · Gym & Fitness Memberships · Warehouse & Retail Clubs · Meal Kits & Food Delivery · Gaming Subscriptions |
-| **Personal Finance** | Bank & ATM Fees · Life Insurance · Credit Card Payment · Transfer · Investment & Savings |
-| **Gifts & Donations** | Gifts · Charitable Donations · Religious Contributions · Cards & Wrapping |
+| **Personal Care** | Haircuts & Salon · Spa & Massage · Cosmetics & Toiletries |
+| **Shopping** | Clothing & Apparel · Shoes & Footwear · Accessories & Jewelry · Electronics & Gadgets · General Merchandise |
+| **Food & Groceries** | Groceries · Restaurants · Coffee Shops · Alcohol & Bars |
+| **Entertainment & Leisure** | Movies & Streaming · Concerts & Events · Hobbies · Books & Magazines · Video Games · Digital Service |
+| **Education** | Tuition · Student Loans · Books & Supplies · Courses & Certifications |
+| **Gifts & Donations** | Gifts · Charitable Donations · Religious Contributions |
+| **Family & Childcare** | Childcare & Daycare · Kids Activities · Pet Care · Elder Care |
+| **Subscriptions and Memberships** | Streaming & Media · Music & Audio · Cloud Storage & Software · News & Publications · Gym & Fitness Memberships · Warehouse & Retail Clubs · Meal Kits & Food Delivery · Gaming Subscriptions · Professional & Trade Memberships |
+| **Personal Finance** | Bank & ATM Fees · Subscriptions & Memberships · Life Insurance · CC Payment · Income · Pension · SSA · CD · Transfer |
 | **Taxes** | Federal Income Tax · State Income Tax · Estimated Tax Payments · Tax Preparation Fees · IRS Penalties & Interest · Local & City Tax |
-| **Income & Refunds** | Salary & Wages · Bonus & Commission · Freelance & Side Income · Investment & Dividends · Rental Income · Tax Refund · Reimbursement · Gifts Received |
-| **Insurance** | Health · Dental & Vision · Life · Disability · Umbrella |
-| **Other** | Fees & Charges · Cash Withdrawal · Reimbursable · Miscellaneous |
 
 ### 💼 Business Taxonomy
 | Category | Subcategories |

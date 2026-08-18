@@ -172,72 +172,196 @@ export const TRAVEL_CATEGORIES: CategoryMeta[] = [
 ];
 
 // ============================================================================
-// FAMILY & HOUSEHOLD CATEGORIES (From Statements PWA)
+// FAMILY & HOUSEHOLD CATEGORIES (Matching Statements PWA)
 // ============================================================================
 export const FAMILY_CATEGORIES: CategoryMeta[] = [
   {
-    id: 'Food & Groceries',
-    name: 'Food & Groceries',
-    icon: ShoppingCart,
-    color: '#16a34a',
-    hint: 'Supermarket, dining, takeout, coffee',
-    subcategories: ['Groceries', 'Supermarket', 'Restaurants', 'Coffee Shops', 'Takeout & Delivery', 'Alcohol & Bars', 'Bakery & Snacks']
+    id: 'Income',
+    name: 'Income',
+    icon: Banknote,
+    color: '#059669',
+    hint: 'Salary, bonus, freelance, dividends, refunds, unemployment',
+    subcategories: [
+      'Salary & Wages',
+      'Bonus & Commission',
+      'Freelance & Side Income',
+      'Investment & Dividends',
+      'Rental Income',
+      'Tax Refund',
+      'Reimbursement',
+      'Gifts Received',
+      'Unemployment Benefits'
+    ]
   },
   {
     id: 'Health & Wellness',
     name: 'Health & Wellness',
     icon: HeartPulse,
     color: '#ef4444',
-    hint: 'Doctor, dental, vision, pharmacy, gym',
-    subcategories: ['Doctor Visits', 'Dental Care', 'Vision Care', 'Pharmacy & Prescriptions', 'Gym & Fitness', 'Therapy & Counseling']
+    hint: 'Doctor, dental, vision, pharmacy, gym, counseling',
+    subcategories: [
+      'Doctor Visits',
+      'Dental Care',
+      'Vision Care',
+      'Pharmacy & Prescriptions',
+      'Gym & Fitness',
+      'Therapy & Counseling'
+    ]
   },
   {
     id: 'Personal Care',
     name: 'Personal Care',
     icon: Sparkles,
     color: '#f43f5e',
-    hint: 'Haircuts, salon, cosmetics, spa',
-    subcategories: ['Haircuts & Salon', 'Spa & Massage', 'Cosmetics & Toiletries', 'Nails']
+    hint: 'Haircuts, salon, spa, massage, cosmetics',
+    subcategories: [
+      'Haircuts & Salon',
+      'Spa & Massage',
+      'Cosmetics & Toiletries'
+    ]
   },
   {
     id: 'Shopping',
     name: 'Shopping',
     icon: ShoppingBag,
-    color: '#ec4899',
-    hint: 'Clothing, shoes, electronics, home items',
-    subcategories: ['Clothing & Apparel', 'Shoes & Footwear', 'Accessories & Jewelry', 'Electronics & Gadgets', 'Home & Furniture', 'General Merchandise']
+    color: '#2563eb',
+    hint: 'Clothing, shoes, accessories, electronics, general merchandise',
+    subcategories: [
+      'Clothing & Apparel',
+      'Shoes & Footwear',
+      'Accessories & Jewelry',
+      'Electronics & Gadgets',
+      'General Merchandise'
+    ]
   },
   {
-    id: 'Digital & Tech',
-    name: 'Digital & Tech',
-    icon: Laptop,
-    color: '#8b5cf6',
-    hint: 'Software, cloud, domains, AI tools',
-    subcategories: ['Domains & Hosting', 'Software & Apps', 'AI & Dev Tools', 'Cloud & Storage', 'Online Services', 'Devices & Accessories']
+    id: 'Food & Groceries',
+    name: 'Food & Groceries',
+    icon: ShoppingCart,
+    color: '#f59e0b',
+    hint: 'Supermarket, dining, coffee shops, alcohol & bars',
+    subcategories: [
+      'Groceries',
+      'Restaurants',
+      'Coffee Shops',
+      'Alcohol & Bars'
+    ]
   },
   {
     id: 'Entertainment & Leisure',
     name: 'Entertainment & Leisure',
     icon: Clapperboard,
-    color: '#a855f7',
-    hint: 'Streaming, movies, concerts, hobbies',
-    subcategories: ['Movies & Streaming', 'Concerts & Events', 'Hobbies', 'Books & Magazines', 'Video Games', 'Sports & Recreation']
+    color: '#8b5cf6',
+    hint: 'Streaming, movies, concerts, hobbies, books, games, digital service',
+    subcategories: [
+      'Movies & Streaming',
+      'Concerts & Events',
+      'Hobbies',
+      'Books & Magazines',
+      'Video Games',
+      'Digital Service'
+    ]
   },
   {
     id: 'Education',
     name: 'Education',
     icon: GraduationCap,
-    color: '#14b8a6',
-    hint: 'Tuition, student loans, books, courses',
-    subcategories: ['Tuition', 'Student Loans', 'Books & Supplies', 'Courses & Certifications', 'School Fees', 'Tutoring']
+    color: '#0ea5e9',
+    hint: 'Tuition, student loans, books & supplies, courses & certifications',
+    subcategories: [
+      'Tuition',
+      'Student Loans',
+      'Books & Supplies',
+      'Courses & Certifications'
+    ]
+  },
+  {
+    id: 'Gifts & Donations',
+    name: 'Gifts & Donations',
+    icon: Gift,
+    color: '#10b981',
+    hint: 'Gifts, charitable donations, religious contributions',
+    subcategories: [
+      'Gifts',
+      'Charitable Donations',
+      'Religious Contributions'
+    ]
   },
   {
     id: 'Family & Childcare',
     name: 'Family & Childcare',
     icon: Baby,
-    color: '#f59e0b',
-    hint: 'Daycare, babysitting, school, eldercare',
-    subcategories: ['Childcare & Daycare', 'Kids Activities', 'School & Camps', 'Toys & Gear', 'Elder Care']
+    color: '#14b8a6',
+    hint: 'Childcare, daycare, kids activities, pet care, eldercare',
+    subcategories: [
+      'Childcare & Daycare',
+      'Kids Activities',
+      'Pet Care',
+      'Elder Care'
+    ]
+  },
+  {
+    id: 'Subscriptions and Memberships',
+    name: 'Subscriptions and Memberships',
+    icon: RefreshCw,
+    color: '#6366f1',
+    hint: 'Streaming, music, cloud storage, publications, clubs, meal kits',
+    subcategories: [
+      'Streaming & Media',
+      'Music & Audio',
+      'Cloud Storage & Software',
+      'News & Publications',
+      'Gym & Fitness Memberships',
+      'Warehouse & Retail Clubs',
+      'Meal Kits & Food Delivery',
+      'Gaming Subscriptions',
+      'Professional & Trade Memberships'
+    ]
+  },
+  {
+    id: 'Personal Finance',
+    name: 'Personal Finance',
+    icon: Wallet,
+    color: '#a855f7',
+    hint: 'Banking fees, card payments, pension, SSA, transfers, insurance',
+    subcategories: [
+      'Bank & ATM Fees',
+      'Subscriptions & Memberships',
+      'Life Insurance',
+      'CC Payment',
+      'Income',
+      'Pension',
+      'SSA',
+      'CD',
+      'Transfer'
+    ]
+  },
+  {
+    id: 'Taxes',
+    name: 'Taxes',
+    icon: Scale,
+    color: '#ea580c',
+    hint: 'Federal & state income tax, estimated payments, tax prep, local tax',
+    subcategories: [
+      'Federal Income Tax',
+      'State Income Tax',
+      'Estimated Tax Payments',
+      'Tax Preparation Fees',
+      'IRS Penalties & Interest',
+      'Local & City Tax'
+    ]
+  }
+];
+
+// Fallback metadata for any legacy categories found in older transactions
+export const LEGACY_FAMILY_FALLBACK_CATEGORIES: CategoryMeta[] = [
+  {
+    id: 'Household Supplies',
+    name: 'Household Supplies',
+    icon: SprayCan,
+    color: '#0891b2',
+    hint: 'Cleaning, paper goods, kitchen, tools',
+    subcategories: ['Cleaning', 'Paper Goods', 'Kitchen', 'Laundry', 'Storage & Organization', 'Tools & Hardware']
   },
   {
     id: 'Pets',
@@ -248,52 +372,12 @@ export const FAMILY_CATEGORIES: CategoryMeta[] = [
     subcategories: ['Food & Treats', 'Vet & Healthcare', 'Grooming', 'Pet Supplies', 'Boarding & Sitting', 'Medication']
   },
   {
-    id: 'Household Supplies',
-    name: 'Household Supplies',
-    icon: SprayCan,
-    color: '#0891b2',
-    hint: 'Cleaning, paper goods, kitchen, tools',
-    subcategories: ['Cleaning', 'Paper Goods', 'Kitchen', 'Laundry', 'Storage & Organization', 'Tools & Hardware']
-  },
-  {
-    id: 'Subscriptions & Memberships',
-    name: 'Subscriptions & Memberships',
-    icon: RefreshCw,
-    color: '#0284c7',
-    hint: 'Media streaming, clubs, gym, cloud',
-    subcategories: ['Streaming & Media', 'Music & Audio', 'Cloud Storage & Software', 'News & Publications', 'Gym & Fitness Memberships', 'Warehouse & Retail Clubs', 'Meal Kits & Food Delivery', 'Gaming Subscriptions']
-  },
-  {
-    id: 'Personal Finance',
-    name: 'Personal Finance',
-    icon: Wallet,
-    color: '#10b981',
-    hint: 'Banking fees, transfers, savings',
-    subcategories: ['Bank & ATM Fees', 'Life Insurance', 'Credit Card Payment', 'Transfer', 'Investment & Savings']
-  },
-  {
-    id: 'Gifts & Donations',
-    name: 'Gifts & Donations',
-    icon: Gift,
-    color: '#d946ef',
-    hint: 'Presents, charity, religious giving',
-    subcategories: ['Gifts', 'Charitable Donations', 'Religious Contributions', 'Cards & Wrapping']
-  },
-  {
-    id: 'Taxes',
-    name: 'Taxes',
-    icon: Scale,
-    color: '#64748b',
-    hint: 'Income tax, tax prep, local taxes',
-    subcategories: ['Federal Income Tax', 'State Income Tax', 'Estimated Tax Payments', 'Tax Preparation Fees', 'IRS Penalties & Interest', 'Local & City Tax']
-  },
-  {
-    id: 'Income',
-    name: 'Income & Refunds',
-    icon: Banknote,
-    color: '#059669',
-    hint: 'Salary, bonus, refunds, reimbursements',
-    subcategories: ['Salary & Wages', 'Bonus & Commission', 'Freelance & Side Income', 'Investment & Dividends', 'Rental Income', 'Tax Refund', 'Reimbursement', 'Gifts Received']
+    id: 'Digital & Tech',
+    name: 'Digital & Tech',
+    icon: Laptop,
+    color: '#8b5cf6',
+    hint: 'Software, cloud, domains, AI tools',
+    subcategories: ['Domains & Hosting', 'Software & Apps', 'AI & Dev Tools', 'Cloud & Storage', 'Online Services', 'Devices & Accessories']
   },
   {
     id: 'Insurance',
@@ -432,7 +516,8 @@ export const CATEGORY_TAXONOMY_BASE: Record<Target, Record<string, string[]>> = 
 export const ALL_CATEGORIES: CategoryMeta[] = [
   ...FAMILY_CATEGORIES,
   ...TRAVEL_CATEGORIES,
-  ...BUSINESS_CATEGORIES
+  ...BUSINESS_CATEGORIES,
+  ...LEGACY_FAMILY_FALLBACK_CATEGORIES
 ];
 
 export const CATEGORY_META = FAMILY_CATEGORIES;
@@ -496,6 +581,9 @@ export const getEffectiveCategories = (
   return result;
 };
 
+const normalizeCategoryStr = (str: string) =>
+  str.toLowerCase().replace(/\s*&\s*/g, ' and ').replace(/\s+/g, ' ').trim();
+
 export const getCategoryMeta = (
   categoryId?: string | null,
   target?: Target,
@@ -503,16 +591,18 @@ export const getCategoryMeta = (
 ): CategoryMeta => {
   if (!categoryId) return FALLBACK_META;
   const catLower = String(categoryId).trim().toLowerCase();
+  const catNorm = normalizeCategoryStr(String(categoryId));
+
+  const matches = (c: CategoryMeta) =>
+    (c.id && (c.id.toLowerCase() === catLower || normalizeCategoryStr(c.id) === catNorm)) ||
+    (c.name && (c.name.toLowerCase() === catLower || normalizeCategoryStr(c.name) === catNorm));
+
   if (target) {
     const effective = getEffectiveCategories(target, overrideDoc);
-    const found = effective.find(
-      c => (c.id && c.id.toLowerCase() === catLower) || (c.name && c.name.toLowerCase() === catLower)
-    );
+    const found = effective.find(matches);
     if (found) return found;
   }
-  const found = ALL_CATEGORIES.find(
-    c => (c.id && c.id.toLowerCase() === catLower) || (c.name && c.name.toLowerCase() === catLower)
-  );
+  const found = ALL_CATEGORIES.find(matches);
   return found || FALLBACK_META;
 };
 

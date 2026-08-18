@@ -63,29 +63,22 @@ export interface TargetTaxonomyOverride {
 export type TaxonomyOverrideDoc = Partial<Record<string, TargetTaxonomyOverride>>;
 
 export type ExpenseCategory =
-  | 'Grocery'
-  | 'Food & Dining'
-  | 'Travel'
-  | 'Transportation'
-  | 'Household Supplies'
-  | 'Health & Medical'
-  | 'Shopping'
-  | 'Digital & Tech'
-  | 'Entertainment'
-  | 'Education'
-  | 'Personal Care'
-  | 'Kids & Childcare'
-  | 'Pets'
-  | 'Insurance'
-  | 'Gifts & Donations'
-  | 'Food & Groceries'
+  | 'Income'
   | 'Health & Wellness'
+  | 'Personal Care'
+  | 'Shopping'
+  | 'Food & Groceries'
   | 'Entertainment & Leisure'
+  | 'Education'
+  | 'Gifts & Donations'
   | 'Family & Childcare'
+  | 'Subscriptions and Memberships'
   | 'Subscriptions & Memberships'
   | 'Personal Finance'
   | 'Taxes'
+  | 'Transportation'
   | 'Lodging'
+  | 'Food & Dining'
   | 'Activities & Entertainment'
   | 'Technology'
   | 'Travel Services & Fees'
@@ -98,8 +91,17 @@ export type ExpenseCategory =
   | 'Commissions & Fees'
   | 'Taxes & Licenses'
   | 'Payroll & Contractors'
-  | 'Income'
-  | 'Other';
+  | 'Other'
+  // Legacy categories
+  | 'Grocery'
+  | 'Travel'
+  | 'Household Supplies'
+  | 'Health & Medical'
+  | 'Digital & Tech'
+  | 'Entertainment'
+  | 'Kids & Childcare'
+  | 'Pets'
+  | 'Insurance';
 
 export type ExpenseSubcategory = string;
 

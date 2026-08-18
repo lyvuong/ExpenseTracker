@@ -802,6 +802,186 @@ export const SUBCATEGORY_TAX_GUIDANCE: Record<string, TaxGuidance> = {
     scheduleOrForm: 'Schedule A Line 5a (SALT)',
     deductibleStatus: 'deductible'
   },
+  'Haircuts & Salon': {
+    purpose: 'Non-deductible personal grooming expense.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Spa & Massage': {
+    purpose: 'Non-deductible personal wellness expense (unless prescribed with Letter of Medical Necessity for HSA).',
+    scheduleOrForm: 'Non-deductible / HSA (LMN)',
+    deductibleStatus: 'non-deductible'
+  },
+  'Cosmetics & Toiletries': {
+    purpose: 'Non-deductible personal care items.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Clothing & Apparel': {
+    purpose: 'Everyday clothing is non-deductible under IRC §262; distinctive work uniforms not suitable for street wear are deductible on Schedule C.',
+    scheduleOrForm: 'Non-deductible / Schedule C',
+    deductibleStatus: 'non-deductible'
+  },
+  'Shoes & Footwear': {
+    purpose: 'Non-deductible personal attire; safety steel-toe shoes deductible for business.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Accessories & Jewelry': {
+    purpose: 'Non-deductible personal luxury items.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Electronics & Gadgets': {
+    purpose: 'Personal devices non-deductible; devices used for business deductible on Schedule C.',
+    scheduleOrForm: 'Schedule C / Non-deductible',
+    deductibleStatus: 'partial'
+  },
+  'General Merchandise': {
+    purpose: 'Non-deductible personal household shopping.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Groceries': {
+    purpose: 'Non-deductible personal household living expense.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Coffee Shops': {
+    purpose: 'Non-deductible personal beverage expense.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Alcohol & Bars': {
+    purpose: 'Non-deductible personal dining expense.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Movies & Streaming': {
+    purpose: 'Non-deductible personal entertainment.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Concerts & Events': {
+    purpose: 'Non-deductible personal recreation.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Hobbies': {
+    purpose: 'Hobby expenses are strictly non-deductible under TCJA (cannot offset hobby income).',
+    scheduleOrForm: 'Non-deductible (TCJA)',
+    deductibleStatus: 'non-deductible'
+  },
+  'Books & Magazines': {
+    purpose: 'Personal reading is non-deductible; professional journals deductible on Schedule C.',
+    scheduleOrForm: 'Schedule C / Non-deductible',
+    deductibleStatus: 'partial'
+  },
+  'Video Games': {
+    purpose: 'Non-deductible personal recreation.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Digital Service': {
+    purpose: 'Personal digital subscriptions are non-deductible.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Gifts': {
+    purpose: 'Gifts to individuals are non-deductible (donor must file Form 709 if gift exceeds $18,000/yr per person).',
+    scheduleOrForm: 'Non-deductible (Form 709)',
+    deductibleStatus: 'non-deductible'
+  },
+  'Kids Activities': {
+    purpose: 'After-school activities are non-deductible; summer day camps (not overnight) qualify for Child Care Credit on Form 2441.',
+    scheduleOrForm: 'Form 2441 / Non-deductible',
+    deductibleStatus: 'partial'
+  },
+  'Pet Care': {
+    purpose: 'Non-deductible personal expense (unless trained service animal for medical deduction on Schedule A).',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Streaming & Media': {
+    purpose: 'Non-deductible personal entertainment subscription.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Music & Audio': {
+    purpose: 'Non-deductible personal entertainment subscription.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Cloud Storage & Software': {
+    purpose: 'Deductible on Schedule C for business portion; personal portion is non-deductible.',
+    scheduleOrForm: 'Schedule C / Non-deductible',
+    deductibleStatus: 'partial'
+  },
+  'News & Publications': {
+    purpose: 'Deductible on Schedule C if directly related to your business trade/industry; personal news is non-deductible.',
+    scheduleOrForm: 'Schedule C Line 22',
+    deductibleStatus: 'partial'
+  },
+  'Gym & Fitness Memberships': {
+    purpose: 'Non-deductible personal expense.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Warehouse & Retail Clubs': {
+    purpose: 'Non-deductible annual membership fee (Costco, Sam\'s Club).',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Meal Kits & Food Delivery': {
+    purpose: 'Non-deductible personal meal expense.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Gaming Subscriptions': {
+    purpose: 'Non-deductible personal entertainment.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Professional & Trade Memberships': {
+    purpose: '100% deductible on Schedule C for self-employed industry/trade associations.',
+    scheduleOrForm: 'Schedule C Line 22',
+    deductibleStatus: 'deductible'
+  },
+  'Bank & ATM Fees': {
+    purpose: 'Non-deductible for personal bank accounts; deductible on Schedule C for business bank accounts.',
+    scheduleOrForm: 'Schedule C / Non-deductible',
+    deductibleStatus: 'partial'
+  },
+  'Life Insurance': {
+    purpose: 'Premiums are non-deductible personal expenses; death benefit proceeds are generally received income tax-free.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'CC Payment': {
+    purpose: 'Non-deductible balance payment; interest on personal credit cards is non-deductible.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Pension': {
+    purpose: 'Taxable retirement annuity/pension distributions reported on Form 1040 Line 5a/5b (Form 1099-R).',
+    scheduleOrForm: 'Form 1040 Line 5',
+    deductibleStatus: 'taxable-income'
+  },
+  'SSA': {
+    purpose: 'Social Security benefits reported on Form 1040 Line 6a/6b (0% to 85% taxable based on combined income, Form SSA-1099).',
+    scheduleOrForm: 'Form 1040 Line 6',
+    deductibleStatus: 'taxable-income'
+  },
+  'CD': {
+    purpose: 'Deposit to Certificate of Deposit is a transfer; interest earned is taxable on Form 1040 Line 2b (Form 1099-INT).',
+    scheduleOrForm: 'Form 1040 Line 2b (Interest)',
+    deductibleStatus: 'partial'
+  },
+  'Transfer': {
+    purpose: 'Non-taxable transfer of funds between personal accounts.',
+    scheduleOrForm: 'Non-taxable',
+    deductibleStatus: 'non-deductible'
+  },
 
   // Business
   'Broker Commission Split': {
