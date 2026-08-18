@@ -40,7 +40,7 @@ export const PaymentTypesModal: React.FC<PaymentTypesModalProps> = ({
   onClose,
   paymentTypes,
   currentUserUid,
-  currentUserName = 'Household Member',
+  currentUserName = 'Ly Vuong',
   onAddPaymentType,
   onUpdatePaymentType,
   onDeletePaymentType

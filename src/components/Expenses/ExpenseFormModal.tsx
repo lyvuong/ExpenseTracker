@@ -6,7 +6,7 @@ import {
   getCategoryMeta,
   getEffectiveCategories
 } from '../../constants/categories';
-import { toExpenseCategory, toExpenseSubcategory, todayISO, nowTime } from '../../utils/transactions';
+import { CANONICAL_MEMBERS, normalizeMemberName, nowTime, toExpenseCategory, toExpenseSubcategory, todayISO } from '../../utils/transactions';
 import {
   getResolvedTransactionTaxGuidance,
   getSubcategoryTaxGuidance,
@@ -157,7 +157,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         category: category || (target === 'Travel' ? 'Transportation' : target === 'Business' ? 'Office & Supplies' : 'Food & Groceries'),
         subcategory: toExpenseSubcategory(target, category, initialEntry.detail),
         paymentType: initialEntry.paymentType,
-        user: initialEntry.user || currentUser,
+        user: normalizeMemberName(initialEntry.user || currentUser),
         isTaxDeductible: initialEntry.isTaxDeductible ?? (target === 'Business')
       });
       // Always show a positive number in the amount field
@@ -165,7 +165,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     } else {
       const target = presetTarget || 'Family';
       const defaultCat = presetCategory || (target === 'Travel' ? 'Transportation' : target === 'Business' ? 'Office & Supplies' : 'Food & Groceries');
-      setDraft(emptyDraft(currentUser, defaultPaymentType, target, defaultCat));
+      setDraft(emptyDraft(normalizeMemberName(currentUser), defaultPaymentType, target, defaultCat));
       setAmountText('');
     }
     setError('');
@@ -174,8 +174,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   }, [isOpen, initialEntry, currentUser, presetCategory, presetTarget, defaultPaymentType]);
 
   const memberOptions = useMemo(() => {
-    const all = [currentUser, ...members, draft.user].filter(Boolean);
-    return Array.from(new Set(all));
+    const all = [currentUser, ...members, draft.user].filter(Boolean).map(normalizeMemberName);
+    return Array.from(new Set([...CANONICAL_MEMBERS, ...all]));
   }, [members, currentUser, draft.user]);
 
   // Credit = refund/inflow; Debit = normal expense/outflow

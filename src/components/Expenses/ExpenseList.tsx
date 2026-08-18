@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Search, SlidersHorizontal, Download, ReceiptText, UsersRound, Plane, Briefcase } from 'lucide-react';
 import { EntryRow } from './EntryRow';
 import { getEffectiveCategories, getSubcategoriesFor } from '../../constants/categories';
-import { currentYearKey, formatDayLabel, formatMoney, yearKey } from '../../utils/transactions';
+import { CANONICAL_MEMBERS, currentYearKey, formatDayLabel, formatMoney, normalizeMemberName, yearKey } from '../../utils/transactions';
 import type { ExpenseTarget, LedgerEntry, Target, TaxonomyOverrideDoc } from '../../types';
 
 interface ExpenseListProps {
@@ -56,7 +56,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   };
 
   const members = useMemo(
-    () => Array.from(new Set(entries.map(e => e.user).filter(Boolean))).sort(),
+    () => Array.from(new Set([...CANONICAL_MEMBERS, ...entries.map(e => normalizeMemberName(e.user)).filter(Boolean)])).sort(),
     [entries]
   );
 
@@ -96,7 +96,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
       }
       if (category !== 'all' && e.label.toLowerCase() !== category.toLowerCase()) return false;
       if (subcategory !== 'all' && e.detail.toLowerCase() !== subcategory.toLowerCase()) return false;
-      if (member !== 'all' && e.user !== member) return false;
+      if (member !== 'all' && normalizeMemberName(e.user).toLowerCase() !== normalizeMemberName(member).toLowerCase()) return false;
       if (!term) return true;
       return [e.vendor, e.label, e.detail, e.notes, e.user, e.paymentType, e.targetEntityLabel]
         .filter(Boolean)

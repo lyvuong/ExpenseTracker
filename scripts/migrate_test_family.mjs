@@ -7,7 +7,7 @@ const sqliteDb = new DatabaseSync(sqliteDbPath);
 const usersMap = new Map();
 sqliteDb.prepare('SELECT * FROM ExpenseUsers').all().forEach(u => {
   let name = u.Firstname;
-  if (name === 'Ly') name = 'Anh Vuong';
+  if (name === 'Ly') name = 'Ly Vuong';
   if (name === 'Huong') name = 'Huong Pham';
   if (name === 'Huan') name = 'Huan Vuong';
   usersMap.set(u.ExpenseUserId, name);
@@ -26,23 +26,23 @@ const paymentTypesMap = new Map();
 // Canonical mapped names
 const customPtMapping = {
   1: { name: 'Cash', isSystemDefault: true },
-  2: { name: 'Credit Card', ownerName: 'Anh Vuong' },
-  3: { name: 'VISA', ownerName: 'Anh Vuong' },
-  4: { name: 'VISA - Citi Costco - Anh Vuong', ownerName: 'Anh Vuong' },
-  5: { name: 'Mastercard', ownerName: 'Anh Vuong' },
-  6: { name: 'Capital One Mastercard', ownerName: 'Anh Vuong' },
-  7: { name: 'Wells Fargo VISA', ownerName: 'Anh Vuong' },
-  8: { name: 'Synchrony Mastercard', ownerName: 'Anh Vuong' },
-  9: { name: 'Freedom VISA', ownerName: 'Anh Vuong' },
-  10: { name: 'Gift Card - Vanilla - Anh Vuong', ownerName: 'Anh Vuong' },
-  11: { name: 'Home Depot VISA', ownerName: 'Anh Vuong' },
-  12: { name: 'VISA - Venture X - Anh Vuong', ownerName: 'Anh Vuong' },
+  2: { name: 'Credit Card', ownerName: 'Ly Vuong' },
+  3: { name: 'VISA', ownerName: 'Ly Vuong' },
+  4: { name: 'VISA - Citi Costco - Ly Vuong', ownerName: 'Ly Vuong' },
+  5: { name: 'Mastercard', ownerName: 'Ly Vuong' },
+  6: { name: 'Capital One Mastercard', ownerName: 'Ly Vuong' },
+  7: { name: 'Wells Fargo VISA', ownerName: 'Ly Vuong' },
+  8: { name: 'Synchrony Mastercard', ownerName: 'Ly Vuong' },
+  9: { name: 'Freedom VISA', ownerName: 'Ly Vuong' },
+  10: { name: 'Gift Card - Vanilla - Ly Vuong', ownerName: 'Ly Vuong' },
+  11: { name: 'Home Depot VISA', ownerName: 'Ly Vuong' },
+  12: { name: 'VISA - Venture X - Ly Vuong', ownerName: 'Ly Vuong' },
   13: { name: 'HSA - Huong', ownerName: 'Huong Pham' },
-  14: { name: 'HSA - Ly', ownerName: 'Anh Vuong' },
-  15: { name: 'BCBS Wellness', ownerName: 'Anh Vuong' },
-  16: { name: 'ModivCare Debit', ownerName: 'Anh Vuong' },
+  14: { name: 'HSA - Ly', ownerName: 'Ly Vuong' },
+  15: { name: 'BCBS Wellness', ownerName: 'Ly Vuong' },
+  16: { name: 'ModivCare Debit', ownerName: 'Ly Vuong' },
   17: { name: 'VISA - Venture X - Huong', ownerName: 'Huong Pham' },
-  18: { name: 'VISA - United Explorer - Anh Vuong', ownerName: 'Anh Vuong' },
+  18: { name: 'VISA - United Explorer - Ly Vuong', ownerName: 'Ly Vuong' },
   19: { name: 'VISA - United Explorer - Huong', ownerName: 'Huong Pham' },
   20: { name: 'VISA - United Explorer - Huan', ownerName: 'Huan Vuong' }
 };

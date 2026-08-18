@@ -28,11 +28,14 @@ const LAST_OFFICE_KEY = 'expense_last_office_id';
 
 export const INITIAL_PAYMENT_TYPES: PaymentTypeItem[] = [
   { id: 'pt-1', name: 'Cash', isSystemDefault: true, isDefault: true },
-  { id: 'pt-2', name: 'VISA - Wyndham Rewards - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
-  { id: 'pt-3', name: 'VISA - United Explorer - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
-  { id: 'pt-4', name: 'VISA - Venture X - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
-  { id: 'pt-5', name: 'VISA - Citi Costco - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true },
-  { id: 'pt-6', name: 'Gift Card - Vanilla - Anh Vuong', ownerName: 'Anh Vuong', isDefault: true }
+  { id: 'pt-2', name: 'VISA - Wyndham Rewards - Ly Vuong', ownerName: 'Ly Vuong', isDefault: true },
+  { id: 'pt-3', name: 'VISA - United Explorer - Ly Vuong', ownerName: 'Ly Vuong', isDefault: true },
+  { id: 'pt-4', name: 'VISA - Venture X - Ly Vuong', ownerName: 'Ly Vuong', isDefault: true },
+  { id: 'pt-5', name: 'VISA - Citi Costco - Ly Vuong', ownerName: 'Ly Vuong', isDefault: true },
+  { id: 'pt-6', name: 'VISA - Venture X - Huong Pham', ownerName: 'Huong Pham', isDefault: true },
+  { id: 'pt-7', name: 'VISA - United Explorer - Huong Pham', ownerName: 'Huong Pham', isDefault: true },
+  { id: 'pt-8', name: 'VISA - United Explorer - Huan Vuong', ownerName: 'Huan Vuong', isDefault: true },
+  { id: 'pt-9', name: 'Gift Card - Vanilla - Ly Vuong', ownerName: 'Ly Vuong', isDefault: true }
 ];
 
 export const INITIAL_TRIPS: Trip[] = [
@@ -72,8 +75,9 @@ export const INITIAL_OFFICES: Office[] = [
 ];
 
 export const INITIAL_FAMILY_MEMBERS: FamilyMember[] = [
-  { id: 'fm-1', name: 'Anh Vuong', notes: 'Primary account manager' },
-  { id: 'fm-2', name: 'Household Member', notes: 'Family member' }
+  { id: 'fm-1', name: 'Ly Vuong', notes: 'Primary account manager' },
+  { id: 'fm-2', name: 'Huong Pham', notes: 'Household member' },
+  { id: 'fm-3', name: 'Huan Vuong', notes: 'Household member' }
 ];
 
 export const DEMO_PREFIX = 'demo-';
@@ -93,8 +97,8 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Trader Joe\'s',
     notes: 'Weekly grocery run',
     category: 'Expense - Family - Food & Groceries - Supermarket',
-    paymentType: 'VISA - Wyndham Rewards - Anh Vuong',
-    user: 'Household Member',
+    paymentType: 'VISA - Wyndham Rewards - Ly Vuong',
+    user: 'Ly Vuong',
     target: 'Family'
   },
   {
@@ -106,7 +110,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     notes: 'Lunch',
     category: 'Expense - Family - Food & Groceries - Restaurants',
     paymentType: 'Cash',
-    user: 'Household Member',
+    user: 'Huong Pham',
     target: 'Family'
   },
   {
@@ -117,8 +121,8 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Hilton Tokyo Odaiba',
     notes: 'Hotel deposit for summer vacation',
     category: 'Expense - Travel - Lodging - Hotel/Resort',
-    paymentType: 'VISA - Venture X - Anh Vuong',
-    user: 'Household Member',
+    paymentType: 'VISA - Venture X - Ly Vuong',
+    user: 'Ly Vuong',
     target: 'Travel',
     targetEntityId: 'trip-demo-1',
     targetEntityLabel: 'Summer in Tokyo'
@@ -131,8 +135,8 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Cursor AI & Claude Pro',
     notes: 'Annual AI & dev tooling subscription',
     category: 'Expense - Business - Technology - SaaS & Software Licenses',
-    paymentType: 'VISA - Venture X - Anh Vuong',
-    user: 'Household Member',
+    paymentType: 'VISA - Venture X - Ly Vuong',
+    user: 'Ly Vuong',
     target: 'Business',
     targetEntityId: 'office-demo-2',
     targetEntityLabel: 'Home Office & Studio',
@@ -145,9 +149,9 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     amount: 149.0,
     vendor: 'Target',
     notes: 'Cleaning supplies and paper goods',
-    category: 'Expense - Family - Household Supplies - Cleaning',
-    paymentType: 'Gift Card - Vanilla - Anh Vuong',
-    user: 'Household Member',
+    category: 'Expense - Family - Food & Groceries - Groceries',
+    paymentType: 'Gift Card - Vanilla - Ly Vuong',
+    user: 'Huong Pham',
     target: 'Family'
   },
   {
@@ -158,8 +162,8 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     vendor: 'Namecheap',
     notes: 'Domain renewal — 1 year',
     category: 'Expense - Business - Office & Supplies - Software & Subscriptions',
-    paymentType: 'VISA - Venture X - Anh Vuong',
-    user: 'Household Member',
+    paymentType: 'VISA - Venture X - Ly Vuong',
+    user: 'Huan Vuong',
     target: 'Business',
     isTaxDeductible: true
   }

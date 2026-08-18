@@ -32,7 +32,7 @@ import type {
   UserAuditInfo,
   UserProfile
 } from './types';
-import { buildTransactionCategory, parseTransaction, sortEntries } from './utils/transactions';
+import { CANONICAL_MEMBERS, buildTransactionCategory, normalizeMemberName, parseTransaction, sortEntries } from './utils/transactions';
 import {
   DEMO_PREFIX,
   INITIAL_PAYMENT_TYPES,
@@ -321,7 +321,7 @@ export const App: React.FC = () => {
   }, [familyMembers]);
 
   const handleAddPaymentType = (name: string) => {
-    const authUserName = user?.displayName || user?.email?.split('@')[0] || memberName;
+    const authUserName = normalizeMemberName(user?.displayName || user?.email?.split('@')[0] || memberName);
     const newItem: PaymentTypeItem = {
       id: `pt-${Date.now()}`,
       name,
@@ -417,10 +417,11 @@ export const App: React.FC = () => {
   );
 
   const memberNames = useMemo(() => {
-    const fromHousehold = householdMembers.map(m => m.displayName);
-    const fromFamilyEntities = familyMembers.map(f => f.name);
-    const fromEntries = entries.map(e => e.user).filter(Boolean);
-    return Array.from(new Set([...fromHousehold, ...fromFamilyEntities, ...fromEntries]));
+    const fromHousehold = householdMembers.map(m => normalizeMemberName(m.displayName));
+    const fromFamilyEntities = familyMembers.map(f => normalizeMemberName(f.name));
+    const fromEntries = entries.map(e => normalizeMemberName(e.user)).filter(Boolean);
+    const combined = Array.from(new Set([...fromHousehold, ...fromFamilyEntities, ...fromEntries]));
+    return Array.from(new Set([...CANONICAL_MEMBERS, ...combined]));
   }, [householdMembers, familyMembers, entries]);
 
   const handleSetFamilyCode = async (code: string): Promise<{ success: boolean; message: string }> => {

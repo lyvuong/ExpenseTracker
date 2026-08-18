@@ -1,4 +1,4 @@
-import type { ExpenseRecord, ExpenseSubcategory, ExpenseTarget, LedgerEntry, LedgerSource, Target, Transaction } from '../types';
+import type { ExpenseRecord, ExpenseSubcategory, ExpenseTarget, LedgerEntry, LedgerSource, Transaction } from '../types';
 import { getCategoryMeta, getSubcategoriesFor } from '../constants/categories';
 
 export const EXPENSE_PREFIX = 'Expense';
@@ -15,6 +15,28 @@ export const buildTransactionCategory = (
   subcategory?: ExpenseSubcategory
 ): string => {
   return [EXPENSE_PREFIX, target, category?.trim(), subcategory?.trim()].filter(Boolean).join(' - ');
+};
+
+export const CANONICAL_MEMBERS = ['Ly Vuong', 'Huong Pham', 'Huan Vuong'] as const;
+export type CanonicalMember = (typeof CANONICAL_MEMBERS)[number];
+
+export const normalizeMemberName = (rawName?: string | null): string => {
+  if (!rawName) return 'Ly Vuong';
+  const clean = rawName.trim().toLowerCase();
+
+  if (clean === 'ly' || clean.includes('ly vuong') || clean.includes('anh vuong') || clean === 'lyvuong') {
+    return 'Ly Vuong';
+  }
+  if (clean === 'huong' || clean.includes('huong') || clean.includes('hương') || clean === 'hnpham3149@gmail.com') {
+    return 'Huong Pham';
+  }
+  if (clean === 'huan' || clean.includes('huan') || clean.includes('huân') || clean === 'vqhuan@lv5.org') {
+    return 'Huan Vuong';
+  }
+  if (clean === 'household member') {
+    return 'Ly Vuong';
+  }
+  return rawName.trim();
 };
 
 const SOURCE_PREFIXES: Record<string, LedgerSource> = {
@@ -50,50 +72,46 @@ export const parseTransaction = (
   // Produce signed amount for all display sites: negative = credit
   const signedAmount = isCredit ? -Math.abs(rawAmount) : Math.abs(rawAmount);
 
-  // --- Category / target parsing ----------------------------------------------
-  const parts = (transaction.category || '').split(' - ').map(p => p.trim()).filter(Boolean);
-  const prefix = parts[0] || 'Expense';
+  // --- Parse namespace from raw category string --------------------------------
+  // Format: "Expense - Target - Category - Subcategory" OR "Home - Property - Category"
+  const rawCat = transaction.category || '';
+  const parts = rawCat.split(' - ').map(s => s.trim()).filter(Boolean);
+  const prefix = parts[0] || '';
   const source: LedgerSource = SOURCE_PREFIXES[prefix] || 'Expense';
-  const isNamespaced = prefix === 'Expense' || prefix === 'Home' || prefix === 'Car' || prefix === 'Travel' || prefix === 'Business';
+  const isNamespaced = parts.length >= 2 && prefix in SOURCE_PREFIXES;
 
-  let target: Target = 'Family';
+  let target: ExpenseTarget = 'Family';
   let label = 'Other';
   let detail = '';
 
-  if (expenseRecord && prefix === 'Expense') {
-    // --- New shape: structured data lives in the paired ExpenseRecord ----------
-    target = expenseRecord.target;
-    label = expenseRecord.category || 'General';
-    detail = expenseRecord.subcategory || '';
-  } else if (prefix === 'Home') {
-    target = 'Family';
-    label = parts[1] || 'Home Project';
-    detail = parts.slice(2).join(' · ');
-  } else if (prefix === 'Car') {
-    target = 'Family';
-    label = parts[1] || 'Auto Service';
-    detail = parts.slice(2).join(' · ');
-  } else if (prefix === 'Expense') {
-    // --- Old shape: parse the namespaced category string ----------------------
-    if (parts[1] === 'Family' || parts[1] === 'Travel' || parts[1] === 'Business') {
-      target = parts[1] as Target;
-      label = parts[2] || 'General';
-      detail = parts.slice(3).join(' · ');
-    } else {
-      // Legacy flat categories: "Expense - Grocery - Supermarket"
-      const flatCategory = parts[1] || 'Other';
-      if (flatCategory.toLowerCase() === 'travel') {
-        target = 'Travel';
-        label = parts[2] || 'Transportation';
+  if (source === 'Expense') {
+    if (expenseRecord) {
+      target = expenseRecord.target || 'Family';
+      label = expenseRecord.category || (isNamespaced ? parts[2] : parts[0]) || 'Other';
+      detail = expenseRecord.subcategory || '';
+    } else if (isNamespaced) {
+      const parsedTarget = parts[1] as ExpenseTarget;
+      if (parsedTarget === 'Family' || parsedTarget === 'Travel' || parsedTarget === 'Business') {
+        target = parsedTarget;
+        label = parts[2] || 'Other';
         detail = parts.slice(3).join(' · ');
       } else {
-        target = 'Family';
-        label = flatCategory;
-        detail = parts.slice(2).join(' · ');
+        const flatCategory = parts[1] || 'Other';
+        if (flatCategory.toLowerCase() === 'travel') {
+          target = 'Travel';
+          label = parts[2] || 'Transportation';
+          detail = parts.slice(3).join(' · ');
+        } else {
+          target = 'Family';
+          label = flatCategory;
+          detail = parts.slice(2).join(' · ');
+        }
       }
+      if (transaction.target) target = transaction.target;
+    } else {
+      label = isNamespaced ? (parts[1] || 'Other') : (parts[0] || 'Uncategorized');
+      detail = isNamespaced ? parts.slice(2).join(' · ') : parts.slice(1).join(' · ');
     }
-    // Legacy: explicit target/entity fields on the transaction doc itself
-    if (transaction.target) target = transaction.target;
   } else {
     label = isNamespaced ? (parts[1] || 'Other') : (parts[0] || 'Uncategorized');
     detail = isNamespaced ? parts.slice(2).join(' · ') : parts.slice(1).join(' · ');
@@ -105,6 +123,7 @@ export const parseTransaction = (
 
   return {
     ...transaction,
+    user: normalizeMemberName(transaction.user),
     amount: signedAmount,
     transactionType,
     source,

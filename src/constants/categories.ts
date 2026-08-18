@@ -627,9 +627,12 @@ export const SOURCE_META: Record<LedgerSource, { icon: LucideIcon; color: string
 
 export const PAYMENT_TYPES: PaymentType[] = [
   'Cash',
-  'VISA - Wyndham Rewards - Anh Vuong',
-  'VISA - United Explorer - Anh Vuong',
-  'VISA - Venture X - Anh Vuong',
-  'VISA - Citi Costco - Anh Vuong',
-  'Gift Card - Vanilla - Anh Vuong'
+  'VISA - Wyndham Rewards - Ly Vuong',
+  'VISA - United Explorer - Ly Vuong',
+  'VISA - Venture X - Ly Vuong',
+  'VISA - Citi Costco - Ly Vuong',
+  'VISA - Venture X - Huong Pham',
+  'VISA - United Explorer - Huong Pham',
+  'VISA - United Explorer - Huan Vuong',
+  'Gift Card - Vanilla - Ly Vuong'
 ];
