@@ -497,19 +497,21 @@ export const getEffectiveCategories = (
 };
 
 export const getCategoryMeta = (
-  categoryId: string,
+  categoryId?: string | null,
   target?: Target,
   overrideDoc?: TaxonomyOverrideDoc
 ): CategoryMeta => {
+  if (!categoryId) return FALLBACK_META;
+  const catLower = String(categoryId).trim().toLowerCase();
   if (target) {
     const effective = getEffectiveCategories(target, overrideDoc);
     const found = effective.find(
-      c => c.id.toLowerCase() === categoryId.toLowerCase() || c.name.toLowerCase() === categoryId.toLowerCase()
+      c => (c.id && c.id.toLowerCase() === catLower) || (c.name && c.name.toLowerCase() === catLower)
     );
     if (found) return found;
   }
   const found = ALL_CATEGORIES.find(
-    c => c.id.toLowerCase() === categoryId.toLowerCase() || c.name.toLowerCase() === categoryId.toLowerCase()
+    c => (c.id && c.id.toLowerCase() === catLower) || (c.name && c.name.toLowerCase() === catLower)
   );
   return found || FALLBACK_META;
 };

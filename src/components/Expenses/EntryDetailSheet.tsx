@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Lock } from 'lucide-react';
+import { X, Lock, Landmark } from 'lucide-react';
 import { getCategoryMeta, SOURCE_META } from '../../constants/categories';
 import { formatDayLabel, formatMoney } from '../../utils/transactions';
+import { getResolvedTransactionTaxGuidance } from '../../utils/taxGuidance';
 import type { ExpenseTarget, LedgerEntry } from '../../types';
 
 interface EntryDetailSheetProps {
@@ -85,11 +86,39 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
               {targetBadge.text}
             </span>
             {entry.isTaxDeductible && (
-              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-50">
+              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-50 border border-emerald-200">
                 Tax deductible
               </span>
             )}
           </div>
+
+          {/* Tax Guidance Banner */}
+          {(() => {
+            const taxContext = getResolvedTransactionTaxGuidance({
+              target: entry.target || 'Family',
+              category: entry.label,
+              subcategory: entry.detail,
+              isRefund: entry.amount < 0
+            });
+            return (
+              <div className={`mt-4 p-3 rounded-xl border text-xs flex items-start gap-2.5 ${taxContext.badgeStyle.bg} ${taxContext.badgeStyle.border}`}>
+                <div className="h-5 w-5 rounded-md bg-indigo-500/15 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <Landmark className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-slate-900">{taxContext.headline}</span>
+                    {taxContext.scheduleOrForm && (
+                      <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold border bg-white/80 ${taxContext.badgeStyle.text} ${taxContext.badgeStyle.border}`}>
+                        {taxContext.scheduleOrForm}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-600 mt-1 leading-relaxed">{taxContext.purpose}</p>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="mt-4 divide-y divide-slate-100">
             <DetailRow label="Date" value={formatDayLabel(entry.date)} />

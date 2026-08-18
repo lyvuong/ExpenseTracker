@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Trash2, Store, Settings2, Plane, Plus, Building2, UsersRound } from 'lucide-react';
+import { X, Trash2, Store, Settings2, Plane, Plus, Building2, UsersRound, Landmark } from 'lucide-react';
 import {
   PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES,
   TARGET_META,
@@ -7,6 +7,11 @@ import {
   getEffectiveCategories
 } from '../../constants/categories';
 import { toExpenseCategory, toExpenseSubcategory, todayISO, nowTime } from '../../utils/transactions';
+import {
+  getResolvedTransactionTaxGuidance,
+  getSubcategoryTaxGuidance,
+  resolveTaxGuidance
+} from '../../utils/taxGuidance';
 import type {
   AssociableHome,
   AssociableVehicle,
@@ -167,11 +172,21 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     return Array.from(new Set(all));
   }, [members, currentUser, draft.user]);
 
+  const isRefund = amountText.trim().startsWith('-');
+
+  const taxContext = useMemo(() => {
+    return getResolvedTransactionTaxGuidance({
+      target: draft.target,
+      category: draft.category,
+      subcategory: draft.subcategory,
+      isRefund
+    });
+  }, [draft.target, draft.category, draft.subcategory, isRefund]);
+
   if (!isOpen) return null;
 
   const currentCategories = getEffectiveCategories(draft.target, taxonomyOverrideDoc);
   const activeMeta = getCategoryMeta(draft.category, draft.target, taxonomyOverrideDoc);
-  const isRefund = amountText.trim().startsWith('-');
 
   const handleTargetChange = (newTarget: ExpenseTarget) => {
     const targetCats = getEffectiveCategories(newTarget, taxonomyOverrideDoc);
@@ -551,7 +566,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             </div>
             <div className="flex flex-wrap gap-1.5">
               {currentCategories.map(({ id, name, icon: Icon, color }) => {
-                const isActive = draft.category.toLowerCase() === id.toLowerCase() || draft.category.toLowerCase() === name.toLowerCase();
+                const draftCat = (draft.category || '').toLowerCase();
+                const isActive = draftCat === (id || '').toLowerCase() || draftCat === (name || '').toLowerCase();
                 return (
                   <button
                     key={id}
@@ -570,38 +586,69 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 );
               })}
             </div>
-            {activeMeta.hint && <p className="mt-2 text-[11px] text-slate-400">{activeMeta.hint}</p>}
+            {activeMeta?.hint && <p className="mt-2 text-[11px] text-slate-400">{activeMeta.hint}</p>}
           </div>
 
           {/* Subcategory — optional; tapping active clears */}
-          {activeMeta.subcategories.length > 0 && (
+          {(activeMeta?.subcategories || []).length > 0 && (
             <div>
               <span className="field-label">
                 Subcategory <span className="font-normal normal-case text-slate-400">· optional</span>
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {activeMeta.subcategories.map(sub => {
-                  const isActive = draft.subcategory.toLowerCase() === sub.toLowerCase();
+                {(activeMeta?.subcategories || []).map(sub => {
+                  const isActive = (draft.subcategory || '').toLowerCase() === (sub || '').toLowerCase();
+                  const subGuidance = resolveTaxGuidance(getSubcategoryTaxGuidance(sub, draft.category, draft.target));
                   return (
                     <button
                       key={sub}
                       type="button"
                       aria-pressed={isActive}
                       onClick={() => setDraft(d => ({ ...d, subcategory: isActive ? '' : sub }))}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
                         isActive
-                          ? 'text-white border-transparent'
+                          ? 'text-white border-transparent shadow-xs'
                           : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                       }`}
                       style={isActive ? { backgroundColor: activeMeta.color } : undefined}
                     >
-                      {sub}
+                      <span>{sub}</span>
+                      {subGuidance?.scheduleOrForm && (
+                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${
+                          isActive ? 'bg-black/20 border-white/40 text-white' : 'bg-slate-50 text-slate-500 border-slate-200'
+                        }`}>
+                          {subGuidance.scheduleOrForm}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
           )}
+
+          {/* Dynamic IRS Tax Guidance Callout */}
+          <div className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 transition-all ${taxContext?.badgeStyle?.bg || 'bg-slate-50'} ${taxContext?.badgeStyle?.border || 'border-slate-200'}`}>
+            <div className="h-6 w-6 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+              <Landmark className="h-3.5 w-3.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-slate-900">{taxContext?.headline || 'Tax Guidance'}</span>
+                {taxContext?.scheduleOrForm && (
+                  <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold border bg-white/80 ${taxContext.badgeStyle?.text || 'text-slate-700'} ${taxContext.badgeStyle?.border || 'border-slate-200'}`}>
+                    {taxContext.scheduleOrForm}
+                  </span>
+                )}
+                {isRefund && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Credit / Inflow Mode
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-600 mt-1 leading-relaxed">{taxContext?.purpose}</p>
+            </div>
+          </div>
 
           {/* Vendor */}
           <div>
@@ -697,15 +744,31 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             />
           </div>
 
-          <label className="flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={draft.isTaxDeductible}
-              onChange={e => setDraft(d => ({ ...d, isTaxDeductible: e.target.checked }))}
-              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <span>Tax deductible {draft.target === 'Business' && <span className="text-xs text-indigo-600 font-semibold">(Default for Business)</span>}</span>
-          </label>
+          <div className="space-y-1">
+            <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={draft.isTaxDeductible}
+                onChange={e => setDraft(d => ({ ...d, isTaxDeductible: e.target.checked }))}
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="font-medium">
+                Tax deductible
+                {draft.target === 'Business' && <span className="text-xs text-indigo-600 font-semibold ml-1.5">(Default for Business)</span>}
+                {taxContext.deductibleStatus === 'deductible' && draft.target !== 'Business' && (
+                  <span className="text-xs text-emerald-600 font-semibold ml-1.5">(Qualifies for Tax Deduction)</span>
+                )}
+                {taxContext.deductibleStatus === 'tax-credit' && (
+                  <span className="text-xs text-purple-600 font-semibold ml-1.5">(Tax Credit Eligible)</span>
+                )}
+              </span>
+            </label>
+            {taxContext.deductibleStatus === 'partial' && (
+              <p className="text-[11px] text-amber-700 pl-6.5">
+                ⚠️ Note: Deduction is conditional based on business percentage / IRS itemized limits.
+              </p>
+            )}
+          </div>
 
           {/* Cross-app move to vehicle / home */}
           {initialEntry && (vehicles.length > 0 || homes.length > 0) && (
