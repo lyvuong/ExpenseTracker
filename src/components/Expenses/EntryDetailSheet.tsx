@@ -40,7 +40,7 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <h2 className="text-base font-bold text-slate-900">Entry details</h2>
+          <h2 className="text-base font-bold text-slate-900">Transaction details</h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
@@ -60,12 +60,19 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
               <Icon className="w-6 h-6" style={{ color }} />
             </span>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-slate-900 tabular">{formatMoney(entry.amount)}</p>
-              <p className="text-sm text-slate-500 truncate">{entry.vendor || 'Unknown vendor'}</p>
+              <p className={`text-2xl font-bold tabular ${entry.amount < 0 ? 'text-emerald-700' : 'text-slate-900'}`}>
+                {entry.amount < 0 ? `+${formatMoney(Math.abs(entry.amount))}` : formatMoney(entry.amount)}
+              </p>
+              <p className="text-sm text-slate-500 truncate">{entry.vendor || 'Unknown merchant/party'}</p>
             </div>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-1.5">
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${
+              entry.amount < 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+            }`}>
+              {entry.amount < 0 ? 'Credit / Inflow' : 'Debit / Outflow'}
+            </span>
             {entry.source !== 'Expense' && (
               <span
                 className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
@@ -77,11 +84,6 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
             <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${targetBadge.bg}`}>
               {targetBadge.text}
             </span>
-            {entry.amount < 0 && (
-              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-amber-700 bg-amber-50">
-                Refund
-              </span>
-            )}
             {entry.isTaxDeductible && (
               <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-50">
                 Tax deductible
@@ -97,8 +99,8 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
               <DetailRow label={entry.target === 'Travel' ? 'Linked Trip' : 'Linked Office'} value={entry.targetEntityLabel} />
             )}
             <DetailRow label="Category" value={[entry.label, entry.detail].filter(Boolean).join(' · ')} />
-            <DetailRow label="Payment" value={entry.paymentType} />
-            {entry.user && <DetailRow label="Paid by" value={entry.user} />}
+            <DetailRow label="Payment / Method" value={entry.paymentType} />
+            {entry.user && <DetailRow label="Logged by" value={entry.user} />}
             {entry.notes && <DetailRow label="Notes" value={entry.notes} />}
           </div>
 

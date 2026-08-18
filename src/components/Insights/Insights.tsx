@@ -122,10 +122,10 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              {targetScope === 'All' ? 'Total spent' : `${targetScope} spending`}
+              {targetScope === 'All' ? 'Net total' : `${targetScope} net total`}
             </p>
             <p className="mt-1 text-3xl font-extrabold text-slate-900 tabular">{formatMoney(total)}</p>
-            <p className="text-xs text-slate-500 mt-1">{monthEntries.length} entries in {monthLabel(month)}</p>
+            <p className="text-xs text-slate-500 mt-1">{monthEntries.length} {monthEntries.length === 1 ? 'transaction' : 'transactions'} in {monthLabel(month)}</p>
           </div>
           <select value={month} onChange={e => setMonth(e.target.value)} className="field w-auto">
             {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
@@ -168,7 +168,7 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
               />
               <Tooltip
                 contentStyle={tooltipStyle}
-                formatter={(v) => [formatMoney(Number(v) || 0), 'Spent']}
+                formatter={(v) => [formatMoney(Number(v) || 0), 'Net Activity']}
                 cursor={{ fill: '#eef2ff' }}
               />
               <Bar dataKey="total" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={44} />
@@ -181,7 +181,7 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
       <div className="card p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-slate-500 mb-4">By category</p>
         {byCategory.length === 0 ? (
-          <p className="text-sm text-slate-400">Nothing logged in {monthLabel(month)}.</p>
+          <p className="text-sm text-slate-400">No transactions in {monthLabel(month)}.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
             <div className="h-56">

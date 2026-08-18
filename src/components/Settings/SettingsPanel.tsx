@@ -271,13 +271,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <Info className="w-3.5 h-3.5" /> About
         </p>
         <p className="text-xs text-slate-500 leading-relaxed">
-          <strong className="text-slate-700">Expense</strong> logs everyday household spending into the shared
+          <strong className="text-slate-700">FinanceTracker</strong> logs everyday household debits, credits, and spending into the shared
           <code className="mx-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]">transactions</code>
           collection, alongside HomeTracker and AutoTrack. Entries created in those apps are shown here read-only and are
           edited where they were created.
         </p>
         <p className="mt-3 text-[11px] text-slate-400">
-          {entries.length} entries visible · Progressive Web App · Works offline
+          {entries.length} {entries.length === 1 ? 'transaction' : 'transactions'} visible · Progressive Web App · Works offline
         </p>
       </div>
     </section>

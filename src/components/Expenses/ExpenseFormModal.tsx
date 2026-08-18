@@ -249,7 +249,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <h2 className="text-base font-bold text-slate-900">
-            {initialEntry ? 'Edit expense' : 'New expense'}
+            {initialEntry ? 'Edit transaction' : 'New transaction'}
           </h2>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close">
             <X className="w-5 h-5" />
@@ -260,7 +260,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
 
           {/* Domain Target Selector Pills */}
           <div>
-            <span className="field-label">Expense Domain</span>
+            <span className="field-label">Transaction Domain</span>
             <div className="grid grid-cols-3 gap-2">
               {(['Family', 'Travel', 'Business'] as ExpenseTarget[]).map(t => {
                 const meta = TARGET_META[t];
@@ -479,25 +479,41 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             </div>
           )}
 
-          {/* Amount */}
+          {/* Amount & Transaction Type */}
           <div>
-            <div className="flex items-center justify-between gap-3">
-              <label className="field-label" htmlFor="amount">Amount</label>
-              <button
-                type="button"
-                onClick={toggleRefund}
-                aria-pressed={isRefund}
-                className={`text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full transition-colors ${
-                  isRefund
-                    ? 'bg-amber-900 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Refund / Credit
-              </button>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <label className="field-label mb-0" htmlFor="amount">Amount & Type</label>
+              <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => { if (isRefund) toggleRefund(); }}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                    !isRefund
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Debit (Expense)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { if (!isRefund) toggleRefund(); }}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                    isRefund
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Credit (Refund/Inflow)
+                </button>
+              </div>
             </div>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-400">$</span>
+              <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold ${
+                isRefund ? 'text-emerald-600' : 'text-slate-400'
+              }`}>
+                {isRefund ? '+$' : '$'}
+              </span>
               <input
                 id="amount"
                 type="number"
@@ -507,10 +523,16 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                 value={amountText}
                 onChange={e => setAmountText(e.target.value)}
                 placeholder="0.00"
-                className="field tabular text-3xl font-bold py-3 pl-10"
+                className={`field tabular text-3xl font-bold py-3 pl-12 ${
+                  isRefund ? 'text-emerald-700 bg-emerald-50/40 border-emerald-300 focus:border-emerald-500' : ''
+                }`}
               />
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">Use a negative amount or toggle Refund to log a refund or reimbursement.</p>
+            <p className="mt-2 text-[11px] text-slate-400">
+              {isRefund
+                ? 'Credit mode: logs an incoming refund, reimbursement, or income credit.'
+                : 'Debit mode: logs an outgoing expense or payment.'}
+            </p>
           </div>
 
           {/* Category */}
@@ -688,7 +710,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           {/* Cross-app move to vehicle / home */}
           {initialEntry && (vehicles.length > 0 || homes.length > 0) && (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2.5">
-              <p className="text-xs font-semibold text-slate-500">Not a general expense? Move it to:</p>
+              <p className="text-xs font-semibold text-slate-500">Not a general transaction? Move it to:</p>
               {vehicles.length > 0 && (
                 <div className="flex items-center gap-2">
                   <select
@@ -745,7 +767,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
               type="button"
               onClick={() => onDelete(initialEntry.id)}
               className="p-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors"
-              aria-label="Delete expense"
+              title="Delete transaction"
+              aria-label="Delete transaction"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -762,7 +785,7 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
             onClick={handleSubmit}
             className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm shadow-indigo-600/20 transition-colors"
           >
-            {initialEntry ? 'Save changes' : 'Add expense'}
+            {initialEntry ? 'Save changes' : 'Add transaction'}
           </button>
         </div>
       </div>

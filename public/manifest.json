@@ -1,7 +1,7 @@
 {
-  "short_name": "ExpenseTracker",
-  "name": "ExpenseTracker - Household Expense Log",
-  "description": "Progressive Web App for logging everyday household expenses — groceries, dining, travel and more — shared with the whole family.",
+  "short_name": "FinanceTracker",
+  "name": "FinanceTracker - Household Finance & Transaction Ledger",
+  "description": "Progressive Web App for logging everyday household debits and credits — expenses, refunds, travel, business and more — shared with the whole family.",
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -47,16 +47,16 @@
   "categories": ["finance", "productivity", "utilities"],
   "shortcuts": [
     {
-      "name": "Add Expense",
+      "name": "Add Transaction",
       "short_name": "Add",
-      "description": "Log a new household expense",
+      "description": "Log a new debit or credit transaction",
       "url": "/?action=add",
       "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Expense Log",
-      "short_name": "Log",
-      "description": "Browse the shared household expense log",
+      "name": "Transactions Log",
+      "short_name": "Transactions",
+      "description": "Browse the shared household transaction ledger",
       "url": "/?action=log",
       "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     }

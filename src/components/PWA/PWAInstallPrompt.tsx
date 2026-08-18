@@ -30,10 +30,10 @@ export const PWAInstallPrompt: React.FC = () => {
     <div className="fixed bottom-24 sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm z-40 no-print">
       <div className="card p-4 shadow-xl flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <img src="/favicon.svg" alt="ExpenseTracker app icon" className="w-10 h-10 rounded-xl shrink-0" />
+          <img src="/favicon.svg" alt="FinanceTracker app icon" className="w-10 h-10 rounded-xl shrink-0" />
           <div>
-            <h4 className="text-xs font-bold text-slate-900">Install ExpenseTracker</h4>
-            <p className="text-[11px] text-slate-500">Add to your home screen for one-tap logging.</p>
+            <h4 className="text-xs font-bold text-slate-900">Install FinanceTracker</h4>
+            <p className="text-[11px] text-slate-500">Add to your home screen for one-tap transaction logging.</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5">

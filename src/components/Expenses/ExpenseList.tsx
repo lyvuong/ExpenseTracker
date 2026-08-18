@@ -156,7 +156,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search vendor, category, notes, trip…"
+            placeholder="Search transactions, merchants, categories, notes…"
             className="field pl-9"
           />
         </div>
@@ -174,7 +174,8 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
         <button
           onClick={() => onExportCSV(filtered)}
           className="p-2.5 rounded-xl border bg-white border-slate-200 text-slate-500 hover:border-slate-300 transition-colors"
-          aria-label="Export filtered entries as CSV"
+          title="Export transactions as CSV"
+          aria-label="Export transactions as CSV"
         >
           <Download className="w-4 h-4" />
         </button>
@@ -219,7 +220,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
               className="field w-auto"
               aria-label="Start date"
             />
-            <span className="text-xs text-slate-400">to</span>
+            <span className="text-xs text-slate-400">→</span>
             <input
               type="date"
               value={endDate}
@@ -230,39 +231,52 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
           </div>
         )}
         {!isDefaultScope && (
-          <button onClick={resetScope} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
-            Reset to this year
+          <button
+            onClick={resetScope}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 ml-1"
+          >
+            Reset to current year
           </button>
         )}
       </div>
 
+      {/* Expanded filters */}
       {showFilters && (
-        <div className="card p-4 space-y-3">
+        <div className="card p-4 space-y-3 bg-slate-50 border-slate-200">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="field-label" htmlFor="filter-category">Category</label>
-              <select id="filter-category" value={category} onChange={e => selectCategory(e.target.value)} className="field">
+              <label className="field-label" htmlFor="filter-cat">Category</label>
+              <select
+                id="filter-cat"
+                value={category}
+                onChange={e => selectCategory(e.target.value)}
+                className="field bg-white"
+              >
                 <option value="all">All categories</option>
                 {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            {availableSubcategories.length > 0 && (
-              <div>
-                <label className="field-label" htmlFor="filter-subcategory">Subcategory</label>
-                <select
-                  id="filter-subcategory"
-                  value={subcategory}
-                  onChange={e => setSubcategory(e.target.value)}
-                  className="field"
-                >
-                  <option value="all">All subcategories</option>
-                  {availableSubcategories.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-            )}
             <div>
-              <label className="field-label" htmlFor="filter-member">Member</label>
-              <select id="filter-member" value={member} onChange={e => setMember(e.target.value)} className="field">
+              <label className="field-label" htmlFor="filter-sub">Subcategory</label>
+              <select
+                id="filter-sub"
+                value={subcategory}
+                onChange={e => setSubcategory(e.target.value)}
+                disabled={category === 'all' || availableSubcategories.length === 0}
+                className="field bg-white disabled:opacity-50"
+              >
+                <option value="all">All subcategories</option>
+                {availableSubcategories.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="filter-member">Logged by</label>
+              <select
+                id="filter-member"
+                value={member}
+                onChange={e => setMember(e.target.value)}
+                className="field bg-white"
+              >
                 <option value="all">Everyone</option>
                 {members.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -282,7 +296,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
       {/* Entry Count & Total */}
       <div className="flex items-baseline justify-between px-1">
         <span className="text-xs font-semibold text-slate-500">
-          {filtered.length} {filtered.length === 1 ? 'entry' : 'entries'}
+          {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}
         </span>
         <span className="text-sm font-bold text-slate-900 tabular">{formatMoney(total)}</span>
       </div>
@@ -290,8 +304,8 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
       {grouped.length === 0 ? (
         <div className="card p-10 text-center">
           <ReceiptText className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-700">No expenses found</p>
-          <p className="text-xs text-slate-500 mt-1 mb-4">Log a family, travel or business expense.</p>
+          <p className="text-sm font-semibold text-slate-700">No transactions found</p>
+          <p className="text-xs text-slate-500 mt-1 mb-4">Log a family, travel or business transaction.</p>
           <div className="flex justify-center gap-2">
             <button
               onClick={() => onAddExpense('Family')}

@@ -4,7 +4,7 @@ import type { ActiveTab } from '../../types';
 
 const TABS: { id: ActiveTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-  { id: 'log', label: 'Expenses', icon: ReceiptText },
+  { id: 'log', label: 'Transactions', icon: ReceiptText },
   { id: 'insights', label: 'Insights', icon: PieChart },
   { id: 'settings', label: 'Settings', icon: Settings }
 ];

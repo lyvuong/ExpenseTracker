@@ -34,6 +34,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const inMonth = entries.filter(e => monthKey(e.date) === thisMonth);
     const inLastMonth = entries.filter(e => monthKey(e.date) === lastMonth);
     const total = inMonth.reduce((sum, e) => sum + e.amount, 0);
+    const totalDebits = inMonth.filter(e => e.amount >= 0).reduce((sum, e) => sum + e.amount, 0);
+    const totalCredits = inMonth.filter(e => e.amount < 0).reduce((sum, e) => sum + Math.abs(e.amount), 0);
     const lastTotal = inLastMonth.reduce((sum, e) => sum + e.amount, 0);
     const today = todayISO();
     const todayTotal = entries.filter(e => e.date === today).reduce((sum, e) => sum + e.amount, 0);
@@ -57,6 +59,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     return {
       total,
+      totalDebits,
+      totalCredits,
       lastTotal,
       count: inMonth.length,
       todayTotal,
@@ -79,11 +83,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{monthLabel(thisMonth)}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{monthLabel(thisMonth)} · Net Total</p>
             <p className="mt-1 text-4xl font-extrabold text-slate-900 tabular">{formatMoney(stats.total)}</p>
-            <p className="mt-1.5 text-xs text-slate-500">
-              {stats.count} {stats.count === 1 ? 'entry' : 'entries'} · {formatMoney(stats.dailyAverage)}/day average
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span>{stats.count} {stats.count === 1 ? 'transaction' : 'transactions'}</span>
+              <span>·</span>
+              <span>{formatMoney(stats.dailyAverage)}/day avg</span>
+              {stats.totalCredits > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="text-slate-600 font-medium">Debits: {formatMoney(stats.totalDebits)}</span>
+                  <span>·</span>
+                  <span className="text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">Credits: +{formatMoney(stats.totalCredits)}</span>
+                </>
+              )}
+            </div>
           </div>
           {stats.lastTotal > 0 && (
             <div className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg ${
@@ -172,7 +186,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Log a {selectedTarget} expense as {memberName}
+          Log a {selectedTarget} transaction as {memberName}
         </button>
       </div>
 
@@ -232,7 +246,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Recent activity */}
       <div className="card p-2">
         <div className="flex items-center justify-between px-3 py-2">
-          <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Recent activity</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Recent transactions</h3>
           <button onClick={onViewAll} className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700">
             View all <ArrowRight className="w-3 h-3" />
           </button>
