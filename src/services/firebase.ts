@@ -26,6 +26,7 @@ import type { Firestore } from 'firebase/firestore';
 import type {
   AssociableHome,
   AssociableVehicle,
+  ExpenseRecord,
   FirebaseConfig,
   LedgerEntry,
   Office,
@@ -221,6 +222,61 @@ export const deleteFirestoreTransaction = async (
     await deleteDoc(doc(db, target.root, target.id, 'transactions', transactionId));
   } catch (err) {
     console.error('[Firestore] Error deleting transaction:', err);
+  }
+};
+
+// ==========================================
+// Expense Records (app-specific detail docs)
+// households/{code}/expenseRecords/{id} — paired 1:1 with each ExpenseTracker
+// transaction in the shared ledger.
+// ==========================================
+
+export const subscribeFirestoreExpenseRecords = (
+  userId: string,
+  familyCode: string | undefined,
+  callback: (records: ExpenseRecord[]) => void
+) => {
+  if (!db) return () => {};
+  const target = getStorageTarget(userId, familyCode);
+  const q = collection(db, target.root, target.id, 'expenseRecords');
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ExpenseRecord)));
+  }, (error) => {
+    console.error('[Firestore] ExpenseRecords sync error:', error);
+    if (error.code === 'permission-denied') {
+      console.warn('[Firestore] Permission denied on expenseRecords. Clearing invalid household code.');
+      setStoredFamilyCode('');
+    }
+  });
+};
+
+export const saveFirestoreExpenseRecord = async (
+  userId: string,
+  record: ExpenseRecord,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    const clean = JSON.parse(JSON.stringify(record));
+    await setDoc(doc(db, target.root, target.id, 'expenseRecords', record.id), clean, { merge: true });
+    console.log(`[Firestore] ExpenseRecord saved to ${target.root}/${target.id}:`, record.id);
+  } catch (err) {
+    console.error('[Firestore] Error saving expenseRecord:', err);
+  }
+};
+
+export const deleteFirestoreExpenseRecord = async (
+  userId: string,
+  recordId: string,
+  familyCode?: string
+): Promise<void> => {
+  if (!db) return;
+  try {
+    const target = getStorageTarget(userId, familyCode);
+    await deleteDoc(doc(db, target.root, target.id, 'expenseRecords', recordId));
+  } catch (err) {
+    console.error('[Firestore] Error deleting expenseRecord:', err);
   }
 };
 

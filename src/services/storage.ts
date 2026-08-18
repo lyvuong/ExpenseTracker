@@ -1,4 +1,5 @@
 import type {
+  ExpenseRecord,
   FamilyMember,
   FirebaseConfig,
   LedgerEntry,
@@ -11,6 +12,7 @@ import type {
 import { formatMoney } from '../utils/transactions';
 
 const TRANSACTIONS_KEY = 'expense_transactions_v1';
+const EXPENSE_RECORDS_KEY = 'expense_records_v1';
 const PAYMENT_TYPES_KEY = 'expense_payment_types_v1';
 const TRIPS_KEY = 'expense_trips_v1';
 const OFFICES_KEY = 'expense_offices_v1';
@@ -275,6 +277,25 @@ export const saveLocalTransactions = (transactions: Transaction[]): void => {
     localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
   } catch (err) {
     console.error('Failed to save local transactions:', err);
+  }
+};
+
+export const loadLocalExpenseRecords = (): ExpenseRecord[] => {
+  try {
+    const raw = localStorage.getItem(EXPENSE_RECORDS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to load local expense records:', err);
+    return [];
+  }
+};
+
+export const saveLocalExpenseRecords = (records: ExpenseRecord[]): void => {
+  try {
+    localStorage.setItem(EXPENSE_RECORDS_KEY, JSON.stringify(records));
+  } catch (err) {
+    console.error('Failed to save local expense records:', err);
   }
 };
 

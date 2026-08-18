@@ -1,4 +1,4 @@
-import type { ExpenseSubcategory, ExpenseTarget, LedgerEntry, LedgerSource, Target, Transaction } from '../types';
+import type { ExpenseRecord, ExpenseSubcategory, ExpenseTarget, LedgerEntry, LedgerSource, Target, Transaction } from '../types';
 import { getCategoryMeta, getSubcategoriesFor } from '../constants/categories';
 
 export const EXPENSE_PREFIX = 'Expense';
@@ -25,17 +25,47 @@ const SOURCE_PREFIXES: Record<string, LedgerSource> = {
   Business: 'Business'
 };
 
-export const parseTransaction = (transaction: Transaction): LedgerEntry => {
+/**
+ * Converts a raw Firestore Transaction into a display-ready LedgerEntry.
+ *
+ * Handles two write shapes transparently:
+ *   - Old shape: signed amount (negative = credit), no transactionType, target/entityId embedded on the
+ *     transaction doc itself, category namespaced string carries structured data.
+ *   - New shape: unsigned amount, transactionType: 'Debit'|'Credit', target/entityId live in an
+ *     ExpenseRecord detail doc (pass it as the second argument).
+ *
+ * Output LedgerEntry.amount is always signed (negative = credit) so all display sites work unchanged.
+ */
+export const parseTransaction = (
+  transaction: Transaction,
+  expenseRecord?: ExpenseRecord
+): LedgerEntry => {
+  // --- Direction normalization -------------------------------------------------
+  // Detect credit from: explicit transactionType (new shape) OR negative amount (old shape)
+  const rawAmount = Number(transaction.amount) || 0;
+  const isCredit =
+    transaction.transactionType === 'Credit' ||
+    (!transaction.transactionType && rawAmount < 0);
+  const transactionType: 'Debit' | 'Credit' = isCredit ? 'Credit' : 'Debit';
+  // Produce signed amount for all display sites: negative = credit
+  const signedAmount = isCredit ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+
+  // --- Category / target parsing ----------------------------------------------
   const parts = (transaction.category || '').split(' - ').map(p => p.trim()).filter(Boolean);
   const prefix = parts[0] || 'Expense';
-  const source: LedgerSource = SOURCE_PREFIXES[prefix] || (prefix === 'Home' ? 'Home' : prefix === 'Car' ? 'Car' : 'Expense');
+  const source: LedgerSource = SOURCE_PREFIXES[prefix] || 'Expense';
   const isNamespaced = prefix === 'Expense' || prefix === 'Home' || prefix === 'Car' || prefix === 'Travel' || prefix === 'Business';
 
-  let target: Target = transaction.target || 'Family';
+  let target: Target = 'Family';
   let label = 'Other';
   let detail = '';
 
-  if (prefix === 'Home') {
+  if (expenseRecord && prefix === 'Expense') {
+    // --- New shape: structured data lives in the paired ExpenseRecord ----------
+    target = expenseRecord.target;
+    label = expenseRecord.category || 'General';
+    detail = expenseRecord.subcategory || '';
+  } else if (prefix === 'Home') {
     target = 'Family';
     label = parts[1] || 'Home Project';
     detail = parts.slice(2).join(' · ');
@@ -44,7 +74,7 @@ export const parseTransaction = (transaction: Transaction): LedgerEntry => {
     label = parts[1] || 'Auto Service';
     detail = parts.slice(2).join(' · ');
   } else if (prefix === 'Expense') {
-    // Check if parts[1] is a known target: Family, Travel, Business
+    // --- Old shape: parse the namespaced category string ----------------------
     if (parts[1] === 'Family' || parts[1] === 'Travel' || parts[1] === 'Business') {
       target = parts[1] as Target;
       label = parts[2] || 'General';
@@ -62,23 +92,25 @@ export const parseTransaction = (transaction: Transaction): LedgerEntry => {
         detail = parts.slice(2).join(' · ');
       }
     }
+    // Legacy: explicit target/entity fields on the transaction doc itself
+    if (transaction.target) target = transaction.target;
   } else {
     label = isNamespaced ? (parts[1] || 'Other') : (parts[0] || 'Uncategorized');
     detail = isNamespaced ? parts.slice(2).join(' · ') : parts.slice(1).join(' · ');
   }
 
-  // Use explicit target on transaction doc if provided
-  if (transaction.target) {
-    target = transaction.target;
-  }
+  // Resolve entity link: prefer expenseRecord, fall back to legacy fields on transaction
+  const targetEntityId = expenseRecord?.targetEntityId ?? transaction.targetEntityId;
+  const targetEntityLabel = expenseRecord?.targetEntityLabel ?? transaction.targetEntityLabel;
 
   return {
     ...transaction,
-    amount: Number(transaction.amount) || 0,
+    amount: signedAmount,
+    transactionType,
     source,
     target,
-    targetEntityId: transaction.targetEntityId,
-    targetEntityLabel: transaction.targetEntityLabel,
+    targetEntityId,
+    targetEntityLabel,
     label,
     detail,
     isEditable: source === 'Expense'

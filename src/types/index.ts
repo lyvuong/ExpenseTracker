@@ -115,6 +115,17 @@ export interface PaymentTypeItem {
 
 export type PaymentType = string;
 
+// App-specific detail doc paired with each ExpenseTracker ledger row.
+// Stored at households/{code}/expenseRecords/{id} (same ID as the transaction).
+export interface ExpenseRecord {
+  id: string;
+  target: Target;             // 'Family' | 'Travel' | 'Business'
+  targetEntityId?: string;
+  targetEntityLabel?: string;
+  category: string;           // raw leaf category, e.g. "Food & Groceries" (not namespaced)
+  subcategory?: string;       // raw leaf subcategory
+}
+
 // Generic, app-agnostic ledger entry. This is the exact same collection
 // HomeTracker, AutoTrack, and Statements write to — users/{uid}/transactions or
 // households/{code}/transactions.
@@ -122,13 +133,15 @@ export interface Transaction {
   id: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
-  amount: number;
+  amount: number; // unsigned/positive for new entries; old entries may be signed (negative = credit)
   vendor: string; // store, restaurant or shop
   notes?: string;
   category: string; // namespaced, e.g. "Expense - Family - Food & Groceries - Supermarket"
   paymentType: PaymentType;
   user: string; // household member who logged / paid
   isTaxDeductible?: boolean;
+  transactionType?: 'Debit' | 'Credit'; // direction field — present on new entries; absent on old signed-amount entries
+  // Legacy fields (old ExpenseTracker entries only — moved to ExpenseRecord for new writes)
   target?: Target;
   targetEntityId?: string;
   targetEntityLabel?: string;
@@ -143,6 +156,8 @@ export interface LedgerEntry extends Transaction {
   target: Target;
   targetEntityId?: string;
   targetEntityLabel?: string;
+  transactionType: 'Debit' | 'Credit'; // always resolved (never undefined) on a LedgerEntry
+  amount: number; // always signed: negative = Credit/refund; positive = Debit/expense
   label: string; // leaf category, e.g. "Food & Groceries" or "Lodging"
   detail: string; // subcategory or owning app's context
   isEditable: boolean; // only Expense-owned entries may be edited here
@@ -170,7 +185,8 @@ export interface ExpenseDraft {
   id?: string;
   date: string;
   time: string;
-  amount: number;
+  amount: number; // unsigned/positive — direction is carried by transactionType
+  transactionType: 'Debit' | 'Credit';
   vendor: string;
   notes: string;
   target: ExpenseTarget;

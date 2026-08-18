@@ -18,6 +18,7 @@ import type {
   AssociableVehicle,
   AssociationTarget,
   ExpenseDraft,
+  ExpenseRecord,
   ExpenseTarget,
   FamilyMember,
   LedgerEntry,
@@ -42,6 +43,7 @@ import {
   getStoredLastHomeId,
   getStoredLastVehicleId,
   importJSONBackup,
+  loadLocalExpenseRecords,
   loadLocalFamilyMembers,
   loadLocalOffices,
   loadLocalPaymentTypes,
@@ -49,6 +51,7 @@ import {
   loadLocalTransactions,
   loadLocalTrips,
   restoreSampleData,
+  saveLocalExpenseRecords,
   saveLocalFamilyMembers,
   saveLocalOffices,
   saveLocalPaymentTypes,
@@ -65,6 +68,7 @@ import {
   createCarRecord,
   createHomeRecord,
   deleteFirestoreEntity,
+  deleteFirestoreExpenseRecord,
   deleteFirestorePaymentType,
   deleteFirestoreTransaction,
   getHomesOnce,
@@ -76,6 +80,7 @@ import {
   logoutFirebase,
   registerWithEmail,
   saveFirestoreEntity,
+  saveFirestoreExpenseRecord,
   saveFirestoreOffice,
   saveFirestorePaymentType,
   saveFirestoreTaxonomyOverride,
@@ -83,6 +88,7 @@ import {
   saveFirestoreTrip,
   subscribeAuth,
   subscribeFirestoreEntities,
+  subscribeFirestoreExpenseRecords,
   subscribeFirestoreOffices,
   subscribeFirestorePaymentTypes,
   subscribeFirestoreTaxonomyOverride,
@@ -94,6 +100,9 @@ import {
 
 export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>(() => loadLocalTransactions());
+  const [expenseRecords, setExpenseRecords] = useState<Map<string, ExpenseRecord>>(
+    () => new Map(loadLocalExpenseRecords().map(r => [r.id, r]))
+  );
   const [paymentTypes, setPaymentTypes] = useState<PaymentTypeItem[]>(() => loadLocalPaymentTypes());
   const [trips, setTrips] = useState<Trip[]>(() => loadLocalTrips());
   const [offices, setOffices] = useState<Office[]>(() => loadLocalOffices());
@@ -152,6 +161,7 @@ export const App: React.FC = () => {
     }
 
     let unsubTransactions: (() => void) | null = null;
+    let unsubExpenseRecords: (() => void) | null = null;
     let unsubPaymentTypes: (() => void) | null = null;
     let unsubTrips: (() => void) | null = null;
     let unsubOffices: (() => void) | null = null;
@@ -162,6 +172,7 @@ export const App: React.FC = () => {
       setUser(userProfile);
       setIsAuthLoading(false);
       unsubTransactions?.();
+      unsubExpenseRecords?.();
       unsubPaymentTypes?.();
       unsubTrips?.();
       unsubOffices?.();
@@ -197,6 +208,13 @@ export const App: React.FC = () => {
           setTransactions([]);
           saveLocalTransactions([]);
         }
+      });
+
+      // 1b. ExpenseRecords subscription (detail docs paired with transactions)
+      unsubExpenseRecords = subscribeFirestoreExpenseRecords(userProfile.uid, familyCode, (records) => {
+        const map = new Map(records.map(r => [r.id, r]));
+        setExpenseRecords(map);
+        saveLocalExpenseRecords(records);
       });
 
       // 2. Payment types subscription
@@ -252,6 +270,7 @@ export const App: React.FC = () => {
 
     return () => {
       unsubTransactions?.();
+      unsubExpenseRecords?.();
       unsubPaymentTypes?.();
       unsubTrips?.();
       unsubOffices?.();
@@ -388,8 +407,8 @@ export const App: React.FC = () => {
   };
 
   const entries: LedgerEntry[] = useMemo(
-    () => sortEntries(transactions.map(parseTransaction)),
-    [transactions]
+    () => sortEntries(transactions.map(t => parseTransaction(t, expenseRecords.get(t.id)))),
+    [transactions, expenseRecords]
   );
 
   const vendors = useMemo(
@@ -446,25 +465,41 @@ export const App: React.FC = () => {
 
   const handleSaveExpense = (draft: ExpenseDraft) => {
     const id = draft.id || `exp-${Date.now()}`;
+    const isCredit = draft.transactionType === 'Credit';
+
+    // Ledger row: unsigned amount, transactionType, namespaced category, no target/entity fields
     const transaction: Transaction = {
       id,
       date: draft.date,
       time: draft.time,
-      amount: draft.amount,
+      amount: Math.abs(draft.amount),
       vendor: draft.vendor,
       notes: draft.notes || '',
       category: buildTransactionCategory(draft.target, draft.category, draft.subcategory),
       paymentType: draft.paymentType,
       user: draft.user || memberName,
       isTaxDeductible: draft.isTaxDeductible,
+      transactionType: isCredit ? 'Credit' : 'Debit'
+    };
+
+    // Detail doc: structured target/category data
+    const expenseRecord: ExpenseRecord = {
+      id,
       target: draft.target,
       targetEntityId: draft.targetEntityId,
-      targetEntityLabel: draft.targetEntityLabel
+      targetEntityLabel: draft.targetEntityLabel,
+      category: draft.category,
+      subcategory: draft.subcategory || undefined
     };
 
     setTransactions(prev => prev.some(t => t.id === id)
       ? prev.map(t => (t.id === id ? transaction : t))
       : [transaction, ...prev]);
+    setExpenseRecords(prev => {
+      const next = new Map(prev);
+      next.set(id, expenseRecord);
+      return next;
+    });
 
     setIsFormOpen(false);
     setEditingEntry(null);
@@ -473,16 +508,23 @@ export const App: React.FC = () => {
 
     if (user && isFirebaseActive) {
       saveFirestoreTransaction(user.uid, transaction, familyCode);
+      saveFirestoreExpenseRecord(user.uid, expenseRecord, familyCode);
     }
   };
 
   const handleDeleteExpense = (id: string) => {
     if (!confirm('Delete this expense entry?')) return;
     setTransactions(prev => prev.filter(t => t.id !== id));
+    setExpenseRecords(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
     setIsFormOpen(false);
     setEditingEntry(null);
     if (user && isFirebaseActive) {
       deleteFirestoreTransaction(user.uid, id, familyCode);
+      deleteFirestoreExpenseRecord(user.uid, id, familyCode);
     }
   };
 
@@ -524,7 +566,22 @@ export const App: React.FC = () => {
     setTaxonomyOverrideDoc(imported.taxonomyOverrideDoc);
 
     if (user && isFirebaseActive) {
-      imported.transactions.forEach(t => saveFirestoreTransaction(user.uid, t, familyCode));
+      imported.transactions.forEach(t => {
+        saveFirestoreTransaction(user.uid, t, familyCode);
+        // For old-shape entries that have target on the transaction itself, synthesize a detail doc
+        if (t.target && (t.category || '').startsWith('Expense')) {
+          const parts = (t.category || '').split(' - ').map(p => p.trim());
+          const rec: ExpenseRecord = {
+            id: t.id,
+            target: t.target,
+            targetEntityId: t.targetEntityId,
+            targetEntityLabel: t.targetEntityLabel,
+            category: parts[2] || parts[1] || 'Other',
+            subcategory: parts[3] || undefined
+          };
+          saveFirestoreExpenseRecord(user.uid, rec, familyCode);
+        }
+      });
       imported.trips.forEach(tr => saveFirestoreTrip(user.uid, tr, familyCode));
       imported.offices.forEach(o => saveFirestoreOffice(user.uid, o, familyCode));
       imported.familyMembers.forEach(f => saveFirestoreEntity(user.uid, 'family', f, familyCode));

@@ -71,6 +71,7 @@ const emptyDraft = (
   date: todayISO(),
   time: nowTime(),
   amount: 0,
+  transactionType: 'Debit',
   vendor: '',
   notes: '',
   target,
@@ -138,12 +139,16 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       if (initialEntry.target === 'Travel' || initialEntry.source === 'Travel') target = 'Travel';
       else if (initialEntry.target === 'Business' || initialEntry.source === 'Business') target = 'Business';
 
+      // Derive transactionType from the normalized LedgerEntry (always set after parseTransaction)
+      const entryTransactionType: 'Debit' | 'Credit' = initialEntry.transactionType === 'Credit' ? 'Credit' : 'Debit';
+
       const category = toExpenseCategory(initialEntry.label, target);
       setDraft({
         id: initialEntry.id,
         date: initialEntry.date,
         time: initialEntry.time || nowTime(),
-        amount: initialEntry.amount,
+        amount: Math.abs(initialEntry.amount),
+        transactionType: entryTransactionType,
         vendor: initialEntry.vendor,
         notes: initialEntry.notes || '',
         target,
@@ -155,7 +160,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         user: initialEntry.user || currentUser,
         isTaxDeductible: initialEntry.isTaxDeductible ?? (target === 'Business')
       });
-      setAmountText(initialEntry.amount ? String(initialEntry.amount) : '');
+      // Always show a positive number in the amount field
+      setAmountText(initialEntry.amount ? String(Math.abs(initialEntry.amount)) : '');
     } else {
       const target = presetTarget || 'Family';
       const defaultCat = presetCategory || (target === 'Travel' ? 'Transportation' : target === 'Business' ? 'Office & Supplies' : 'Food & Groceries');
@@ -172,7 +178,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     return Array.from(new Set(all));
   }, [members, currentUser, draft.user]);
 
-  const isRefund = amountText.trim().startsWith('-');
+  // Credit = refund/inflow; Debit = normal expense/outflow
+  const isRefund = draft.transactionType === 'Credit';
 
   const taxContext = useMemo(() => {
     return getResolvedTransactionTaxGuidance({
@@ -235,17 +242,15 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   };
 
   const toggleRefund = () => {
-    setAmountText(text => {
-      const trimmed = text.trim();
-      if (trimmed === '-') return '';
-      if (trimmed.startsWith('-')) return trimmed.slice(1);
-      return trimmed ? `-${trimmed}` : '-';
-    });
+    setDraft(d => ({
+      ...d,
+      transactionType: d.transactionType === 'Credit' ? 'Debit' : 'Credit'
+    }));
   };
 
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
-    const amount = parseFloat(amountText);
+    const amount = Math.abs(parseFloat(amountText));
     if (!Number.isFinite(amount) || amount === 0) {
       setError('Enter an amount other than zero.');
       return;
