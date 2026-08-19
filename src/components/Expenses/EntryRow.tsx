@@ -67,6 +67,11 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView }) => 
               Refund
             </span>
           )}
+          {entry.accountName && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 truncate max-w-[140px]" title={`Account: ${entry.accountName}`}>
+              🏦 {entry.accountName}
+            </span>
+          )}
           {entry.isTaxDeductible && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-50">
               Tax

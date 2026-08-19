@@ -5,6 +5,7 @@ import type {
   LedgerEntry,
   Office,
   PaymentTypeItem,
+  StatementAccount,
   TaxonomyOverrideDoc,
   Transaction,
   Trip
@@ -18,6 +19,7 @@ const TRIPS_KEY = 'expense_trips_v1';
 const OFFICES_KEY = 'expense_offices_v1';
 const FAMILY_MEMBERS_KEY = 'expense_family_members_v1';
 const TAXONOMY_OVERRIDE_KEY = 'expense_taxonomy_override_v1';
+const ACCOUNTS_KEY_PREFIX = 'expense_accounts_v1_';
 
 const FIREBASE_CONFIG_KEY = 'expense_firebase_config_custom';
 const FAMILY_CODE_KEY = 'expense_family_code';
@@ -259,6 +261,33 @@ export const saveLocalFamilyMembers = (members: FamilyMember[]): void => {
     localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
   } catch (err) {
     console.error('Failed to save local family members:', err);
+  }
+};
+
+export const INITIAL_ACCOUNTS: StatementAccount[] = [
+  { accountName: 'Chase Checking', accountCategory: 'bank', accountSubtype: 'Checking' },
+  { accountName: 'Citi Savings', accountCategory: 'bank', accountSubtype: 'Savings' },
+  { accountName: 'VISA - Venture X - Ly Vuong', accountCategory: 'credit_card', accountSubtype: 'Visa' },
+  { accountName: 'VISA - United Explorer - Ly Vuong', accountCategory: 'credit_card', accountSubtype: 'Visa' },
+  { accountName: 'VISA - Wyndham Rewards - Ly Vuong', accountCategory: 'credit_card', accountSubtype: 'Visa' }
+];
+
+export const loadLocalAccounts = (familyCode?: string): StatementAccount[] => {
+  try {
+    const key = `${ACCOUNTS_KEY_PREFIX}${(familyCode || 'default').trim().toUpperCase()}`;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : INITIAL_ACCOUNTS;
+  } catch {
+    return INITIAL_ACCOUNTS;
+  }
+};
+
+export const saveLocalAccounts = (familyCode: string | undefined, accounts: StatementAccount[]): void => {
+  try {
+    const key = `${ACCOUNTS_KEY_PREFIX}${(familyCode || 'default').trim().toUpperCase()}`;
+    localStorage.setItem(key, JSON.stringify(accounts));
+  } catch (err) {
+    console.error('Failed to save local accounts:', err);
   }
 };
 

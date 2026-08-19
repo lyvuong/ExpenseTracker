@@ -830,6 +830,32 @@ export const TargetEntitiesModal: React.FC<TargetEntitiesModalProps> = ({
                     </div>
                   )}
 
+                  {activeTarget === 'Business' && (
+                    <div>
+                      <label className="field-label" htmlFor="office-type">Business Type / Industry</label>
+                      <select
+                        id="office-type"
+                        value={entityType}
+                        onChange={e => setEntityType(e.target.value)}
+                        className="field text-xs bg-white"
+                      >
+                        <option value="General Workspace">General Business / Workspace</option>
+                        <option value="Real Estate">Real Estate & Brokerage</option>
+                        <option value="Consulting">Consulting & Professional Services</option>
+                        <option value="Technology & Software">Technology & Software</option>
+                        <option value="Healthcare & Medical">Healthcare & Medical</option>
+                        <option value="Retail & E-Commerce">Retail & E-Commerce</option>
+                        <option value="Legal & Financial">Legal & Financial</option>
+                        <option value="Home Office">Home Office</option>
+                        <option value="Headquarters">Headquarters</option>
+                        <option value="Branch">Branch</option>
+                      </select>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Choosing &quot;Real Estate&quot; enables MLS dues, broker splits, and property staging subcategories.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="field-label" htmlFor="entity-notes">Notes</label>
                     <textarea

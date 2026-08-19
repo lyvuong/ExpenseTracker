@@ -24,6 +24,7 @@ import type {
   LedgerEntry,
   Office,
   PaymentTypeItem,
+  StatementAccount,
   TargetEntity,
   TargetTaxonomyOverride,
   TaxonomyOverrideDoc,
@@ -43,6 +44,7 @@ import {
   getStoredLastHomeId,
   getStoredLastVehicleId,
   importJSONBackup,
+  loadLocalAccounts,
   loadLocalExpenseRecords,
   loadLocalFamilyMembers,
   loadLocalOffices,
@@ -51,6 +53,7 @@ import {
   loadLocalTransactions,
   loadLocalTrips,
   restoreSampleData,
+  saveLocalAccounts,
   saveLocalExpenseRecords,
   saveLocalFamilyMembers,
   saveLocalOffices,
@@ -87,6 +90,7 @@ import {
   saveFirestoreTransaction,
   saveFirestoreTrip,
   subscribeAuth,
+  subscribeFirestoreAccounts,
   subscribeFirestoreEntities,
   subscribeFirestoreExpenseRecords,
   subscribeFirestoreOffices,
@@ -108,6 +112,7 @@ export const App: React.FC = () => {
   const [offices, setOffices] = useState<Office[]>(() => loadLocalOffices());
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>(() => loadLocalFamilyMembers());
   const [taxonomyOverrideDoc, setTaxonomyOverrideDoc] = useState<TaxonomyOverrideDoc>(() => loadLocalTaxonomyOverride());
+  const [accounts, setAccounts] = useState<StatementAccount[]>(() => loadLocalAccounts(getStoredFamilyCode()));
 
   const [familyCode, setFamilyCodeState] = useState<string>(() => getStoredFamilyCode());
   const [householdMembers, setHouseholdMembers] = useState<UserAuditInfo[]>([]);
@@ -167,6 +172,7 @@ export const App: React.FC = () => {
     let unsubOffices: (() => void) | null = null;
     let unsubFamilyMembers: (() => void) | null = null;
     let unsubTaxonomy: (() => void) | null = null;
+    let unsubAccounts: (() => void) | null = null;
 
     const unsubscribeAuth = subscribeAuth((userProfile) => {
       setUser(userProfile);
@@ -266,6 +272,16 @@ export const App: React.FC = () => {
         setTaxonomyOverrideDoc(doc);
         saveLocalTaxonomyOverride(familyCode, doc);
       });
+
+      // 5. Statements PWA Accounts subscription
+      unsubAccounts = subscribeFirestoreAccounts(familyCode, (cloudAccounts) => {
+        if (cloudAccounts.length > 0) {
+          setAccounts(cloudAccounts);
+          saveLocalAccounts(familyCode, cloudAccounts);
+        } else {
+          setAccounts(loadLocalAccounts(familyCode));
+        }
+      });
     });
 
     return () => {
@@ -276,6 +292,7 @@ export const App: React.FC = () => {
       unsubOffices?.();
       unsubFamilyMembers?.();
       unsubTaxonomy?.();
+      unsubAccounts?.();
       unsubscribeAuth();
     };
   }, [familyCode]);
@@ -319,6 +336,10 @@ export const App: React.FC = () => {
   useEffect(() => {
     saveLocalFamilyMembers(familyMembers);
   }, [familyMembers]);
+
+  useEffect(() => {
+    saveLocalAccounts(familyCode, accounts);
+  }, [familyCode, accounts]);
 
   const handleAddPaymentType = (name: string) => {
     const authUserName = normalizeMemberName(user?.displayName || user?.email?.split('@')[0] || memberName);
@@ -478,6 +499,7 @@ export const App: React.FC = () => {
       notes: draft.notes || '',
       category: buildTransactionCategory(draft.target, draft.category, draft.subcategory),
       paymentType: draft.paymentType,
+      accountName: draft.accountName || undefined,
       user: draft.user || memberName,
       isTaxDeductible: draft.isTaxDeductible,
       transactionType: isCredit ? 'Credit' : 'Debit'
@@ -490,7 +512,8 @@ export const App: React.FC = () => {
       targetEntityId: draft.targetEntityId,
       targetEntityLabel: draft.targetEntityLabel,
       category: draft.category,
-      subcategory: draft.subcategory || undefined
+      subcategory: draft.subcategory || undefined,
+      accountName: draft.accountName || undefined
     };
 
     setTransactions(prev => prev.some(t => t.id === id)
@@ -712,6 +735,7 @@ export const App: React.FC = () => {
         presetTarget={presetTarget}
         paymentTypes={paymentTypes}
         onManagePaymentTypes={() => setIsPaymentModalOpen(true)}
+        accounts={accounts}
         trips={trips}
         offices={offices}
         familyMembers={familyMembers}

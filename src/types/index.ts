@@ -117,6 +117,13 @@ export interface PaymentTypeItem {
 
 export type PaymentType = string;
 
+export interface StatementAccount {
+  accountName: string;
+  accountCategory?: 'bank' | 'credit_card' | null;
+  accountSubtype?: string | null;
+  currentBalance?: number | null;
+}
+
 // App-specific detail doc paired with each ExpenseTracker ledger row.
 // Stored at households/{code}/expenseRecords/{id} (same ID as the transaction).
 export interface ExpenseRecord {
@@ -126,6 +133,7 @@ export interface ExpenseRecord {
   targetEntityLabel?: string;
   category: string;           // raw leaf category, e.g. "Food & Groceries" (not namespaced)
   subcategory?: string;       // raw leaf subcategory
+  accountName?: string;       // target account for credit/deposit (from Statements PWA)
 }
 
 // Generic, app-agnostic ledger entry. This is the exact same collection
@@ -143,6 +151,7 @@ export interface Transaction {
   user: string; // household member who logged / paid
   isTaxDeductible?: boolean;
   transactionType?: 'Debit' | 'Credit'; // direction field — present on new entries; absent on old signed-amount entries
+  accountName?: string; // target account for credit/deposit (synced with Statements PWA)
   // Legacy fields (old ExpenseTracker entries only — moved to ExpenseRecord for new writes)
   target?: Target;
   targetEntityId?: string;
@@ -163,6 +172,7 @@ export interface LedgerEntry extends Transaction {
   label: string; // leaf category, e.g. "Food & Groceries" or "Lodging"
   detail: string; // subcategory or owning app's context
   isEditable: boolean; // only Expense-owned entries may be edited here
+  accountName?: string;
 }
 
 // Minimal, read-only views of CarTracker's Vehicle and HomeTracker's Home
@@ -197,6 +207,7 @@ export interface ExpenseDraft {
   category: string;
   subcategory: ExpenseSubcategory;
   paymentType: PaymentType;
+  accountName?: string;
   user: string;
   isTaxDeductible: boolean;
 }

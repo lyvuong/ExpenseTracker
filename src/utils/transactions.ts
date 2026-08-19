@@ -120,6 +120,7 @@ export const parseTransaction = (
   // Resolve entity link: prefer expenseRecord, fall back to legacy fields on transaction
   const targetEntityId = expenseRecord?.targetEntityId ?? transaction.targetEntityId;
   const targetEntityLabel = expenseRecord?.targetEntityLabel ?? transaction.targetEntityLabel;
+  const accountName = expenseRecord?.accountName ?? transaction.accountName;
 
   return {
     ...transaction,
@@ -130,6 +131,7 @@ export const parseTransaction = (
     target,
     targetEntityId,
     targetEntityLabel,
+    accountName,
     label,
     detail,
     isEditable: source === 'Expense'

@@ -31,6 +31,7 @@ import type {
   LedgerEntry,
   Office,
   PaymentTypeItem,
+  StatementAccount,
   TargetTaxonomyOverride,
   TaxonomyOverrideDoc,
   Transaction,
@@ -671,5 +672,44 @@ export const deleteFirestorePaymentType = async (
     await deleteDoc(doc(db, target.root, target.id, 'payment_types', paymentTypeId));
   } catch (err) {
     console.error('[Firestore] Error deleting payment type:', err);
+  }
+};
+
+// ==========================================
+// Statements PWA Accounts Collection
+// Shared with Statements PWA: households/{code}/accounts
+// ==========================================
+
+export const subscribeFirestoreAccounts = (
+  familyCode: string,
+  callback: (accounts: StatementAccount[]) => void
+) => {
+  if (!db || !familyCode) {
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    const target = getStorageTarget('', familyCode);
+    const accountsRef = collection(db, target.root, target.id, 'accounts');
+
+    return onSnapshot(accountsRef, (snapshot) => {
+      const list: StatementAccount[] = snapshot.docs.map(docSnap => ({
+        ...docSnap.data(),
+        accountName: docSnap.id
+      } as StatementAccount));
+      callback(list);
+    }, (err) => {
+      console.warn('[Firestore] Accounts sync error:', err);
+      if (err.code === 'permission-denied') {
+        console.warn('[Firestore] Permission denied on accounts. Clearing invalid household code.');
+        setStoredFamilyCode('');
+      }
+      callback([]);
+    });
+  } catch (err) {
+    console.warn('[Firestore] Subscribe accounts warning:', err);
+    callback([]);
+    return () => {};
   }
 };

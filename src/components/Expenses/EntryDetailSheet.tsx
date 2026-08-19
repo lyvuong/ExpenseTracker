@@ -129,7 +129,10 @@ export const EntryDetailSheet: React.FC<EntryDetailSheetProps> = ({ entry, onClo
             )}
             <DetailRow label="Category" value={[entry.label, entry.detail].filter(Boolean).join(' · ')} />
             <DetailRow label="Payment / Method" value={entry.paymentType} />
-            {entry.user && <DetailRow label="Logged by" value={entry.user} />}
+            {entry.accountName && (
+              <DetailRow label={entry.amount < 0 ? 'Credited / Deposited to' : 'Account'} value={entry.accountName} />
+            )}
+            {entry.user && <DetailRow label={entry.amount < 0 ? 'Received / Logged by' : 'Logged by'} value={entry.user} />}
             {entry.notes && <DetailRow label="Notes" value={entry.notes} />}
           </div>
 

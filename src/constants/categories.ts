@@ -41,6 +41,7 @@ import type {
   ExpenseCategory,
   ExpenseSubcategory,
   LedgerSource,
+  Office,
   PaymentType,
   Target,
   TaxonomyOverrideDoc
@@ -613,6 +614,117 @@ export const getSubcategoriesFor = (
 ): ExpenseSubcategory[] => {
   const meta = getCategoryMeta(categoryId, target, overrideDoc);
   return meta.subcategories || [];
+};
+
+export const REAL_ESTATE_SUBCATEGORIES = new Set([
+  'MLS Dues & Fees',
+  'Realtor / Trade Association Dues',
+  'Broker Commission Split',
+  'Broker Desk Fees',
+  'Brokerage Admin Fees',
+  'Closing & Transaction Fees',
+  'Staging & Promotional'
+]);
+
+export interface CategoryFilterContext {
+  target: Target;
+  transactionType?: 'Debit' | 'Credit';
+  targetEntityId?: string;
+  selectedOffice?: Office | null;
+  hasFamilyMemberSelected?: boolean;
+  overrideDoc?: TaxonomyOverrideDoc;
+}
+
+/**
+ * Context-aware category and subcategory resolver.
+ * Filters and reorders based on:
+ * - Transaction type (Debit vs Credit)
+ * - Family context (Specific member vs Entire family)
+ * - Business office industry (Real Estate vs others)
+ */
+export const getContextCategories = (
+  context: CategoryFilterContext
+): CategoryMeta[] => {
+  const {
+    target,
+    transactionType = 'Debit',
+    selectedOffice,
+    hasFamilyMemberSelected = false,
+    overrideDoc
+  } = context;
+
+  const effective = getEffectiveCategories(target, overrideDoc);
+
+  // 1. Business Office Industry Filter
+  const isRealEstate = selectedOffice
+    ? (selectedOffice.officeType === 'Real Estate' ||
+       (selectedOffice.officeType || '').toLowerCase().includes('real estate') ||
+       selectedOffice.name.toLowerCase().includes('real estate') ||
+       selectedOffice.name.toLowerCase().includes('realty'))
+    : false;
+
+  const filtered = effective.map(cat => {
+    let subs = [...cat.subcategories];
+
+    // Filter real estate subcategories if not a real estate business
+    if (target === 'Business' && !isRealEstate) {
+      subs = subs.filter(s => !REAL_ESTATE_SUBCATEGORIES.has(s));
+    }
+
+    return {
+      ...cat,
+      subcategories: subs
+    };
+  });
+
+  // 2. Debit vs Credit Filter / Sorting
+  if (transactionType === 'Credit') {
+    // In Credit mode: prioritize Income / Inflow categories
+    filtered.sort((a, b) => {
+      const aIsIncome = a.id.toLowerCase().includes('income') || a.id.toLowerCase().includes('refund');
+      const bIsIncome = b.id.toLowerCase().includes('income') || b.id.toLowerCase().includes('refund');
+      if (aIsIncome && !bIsIncome) return -1;
+      if (!aIsIncome && bIsIncome) return 1;
+      return 0;
+    });
+  } else {
+    // In Debit mode: prioritize standard expense categories, move Income to bottom
+    filtered.sort((a, b) => {
+      const aIsIncome = a.id.toLowerCase().includes('income');
+      const bIsIncome = b.id.toLowerCase().includes('income');
+      if (aIsIncome && !bIsIncome) return 1;
+      if (!aIsIncome && bIsIncome) return -1;
+      return 0;
+    });
+  }
+
+  // 3. Family Member vs All Family sorting
+  if (target === 'Family' && transactionType === 'Debit') {
+    if (hasFamilyMemberSelected) {
+      // Prioritize personal categories for individual members
+      const personalOrder = [
+        'Personal Care',
+        'Education',
+        'Shopping',
+        'Health & Wellness',
+        'Entertainment & Leisure',
+        'Family & Childcare',
+        'Subscriptions and Memberships',
+        'Food & Groceries',
+        'Gifts & Donations'
+      ];
+      filtered.sort((a, b) => {
+        const aIdx = personalOrder.indexOf(a.id);
+        const bIdx = personalOrder.indexOf(b.id);
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+        return 0;
+      });
+    }
+  }
+
+  return filtered;
 };
 
 // Sibling apps and cross-app target metadata (HomeTracker / CarTracker)
