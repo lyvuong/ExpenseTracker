@@ -134,6 +134,11 @@ export interface ExpenseRecord {
   category: string;           // raw leaf category, e.g. "Food & Groceries" (not namespaced)
   subcategory?: string;       // raw leaf subcategory
   accountName?: string;       // target account for credit/deposit (from Statements PWA)
+  // Foreign-currency capture for international trip expenses — `amount` on the
+  // paired Transaction is always the converted USD value.
+  foreignAmount?: number;
+  foreignCurrency?: string;   // ISO 4217 code, e.g. "EUR"
+  exchangeRate?: number;      // USD per 1 unit of foreignCurrency, at the time of entry
 }
 
 // Generic, app-agnostic ledger entry. This is the exact same collection
@@ -173,6 +178,9 @@ export interface LedgerEntry extends Transaction {
   detail: string; // subcategory or owning app's context
   isEditable: boolean; // only Expense-owned entries may be edited here
   accountName?: string;
+  foreignAmount?: number;
+  foreignCurrency?: string;
+  exchangeRate?: number;
 }
 
 // Minimal, read-only views of CarTracker's Vehicle and HomeTracker's Home
@@ -210,6 +218,9 @@ export interface ExpenseDraft {
   accountName?: string;
   user: string;
   isTaxDeductible: boolean;
+  foreignAmount?: number;
+  foreignCurrency?: string;
+  exchangeRate?: number;
 }
 
 export interface FirebaseConfig {

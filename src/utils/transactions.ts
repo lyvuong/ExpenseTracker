@@ -121,6 +121,9 @@ export const parseTransaction = (
   const targetEntityId = expenseRecord?.targetEntityId ?? transaction.targetEntityId;
   const targetEntityLabel = expenseRecord?.targetEntityLabel ?? transaction.targetEntityLabel;
   const accountName = expenseRecord?.accountName ?? transaction.accountName;
+  const foreignAmount = expenseRecord?.foreignAmount;
+  const foreignCurrency = expenseRecord?.foreignCurrency;
+  const exchangeRate = expenseRecord?.exchangeRate;
 
   return {
     ...transaction,
@@ -132,6 +135,9 @@ export const parseTransaction = (
     targetEntityId,
     targetEntityLabel,
     accountName,
+    foreignAmount,
+    foreignCurrency,
+    exchangeRate,
     label,
     detail,
     isEditable: source === 'Expense'

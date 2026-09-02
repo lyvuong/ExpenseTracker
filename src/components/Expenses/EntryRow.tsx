@@ -64,6 +64,14 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView, showD
               {entry.targetEntityLabel}
             </span>
           )}
+          {entry.foreignAmount && entry.foreignCurrency && (
+            <span
+              className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200"
+              title={`Paid ${entry.foreignAmount.toFixed(2)} ${entry.foreignCurrency}${entry.exchangeRate ? ` · 1 ${entry.foreignCurrency} = $${entry.exchangeRate.toFixed(4)}` : ''}`}
+            >
+              {entry.foreignCurrency} {entry.foreignAmount.toFixed(2)}
+            </span>
+          )}
           {entry.amount < 0 && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-amber-700 bg-amber-50">
               Refund

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Trash2, Store, Settings2, Plane, Plus, Building2, UsersRound, Landmark } from 'lucide-react';
+import { X, Trash2, Store, Settings2, Plane, Plus, Building2, UsersRound, Landmark, Globe2 } from 'lucide-react';
 import {
   PAYMENT_TYPES as DEFAULT_PAYMENT_TYPES,
   TARGET_META,
@@ -8,6 +8,7 @@ import {
   getEffectiveCategories
 } from '../../constants/categories';
 import { CANONICAL_MEMBERS, normalizeMemberName, nowTime, toExpenseCategory, toExpenseSubcategory, todayISO } from '../../utils/transactions';
+import { CURRENCIES, convertToUSD } from '../../utils/currency';
 import {
   getResolvedTransactionTaxGuidance,
   getSubcategoryTaxGuidance,
@@ -140,6 +141,13 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   const [newEntityName, setNewEntityName] = useState('');
   const [newOfficeType, setNewOfficeType] = useState('General Workspace');
 
+  const [useForeignCurrency, setUseForeignCurrency] = useState(false);
+  const [foreignAmountText, setForeignAmountText] = useState('');
+  const [foreignCurrency, setForeignCurrency] = useState('EUR');
+  const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
+  const [isConverting, setIsConverting] = useState(false);
+  const [conversionNote, setConversionNote] = useState('');
+
   useEffect(() => {
     if (!isOpen) return;
     setSelectedVehicleId(defaultVehicleId || vehicles[0]?.id || '');
@@ -175,13 +183,29 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         isTaxDeductible: initialEntry.isTaxDeductible ?? (target === 'Business')
       });
       setAmountText(initialEntry.amount ? String(Math.abs(initialEntry.amount)) : '');
+      if (initialEntry.foreignAmount && initialEntry.foreignCurrency) {
+        setUseForeignCurrency(true);
+        setForeignAmountText(String(initialEntry.foreignAmount));
+        setForeignCurrency(initialEntry.foreignCurrency);
+        setExchangeRate(initialEntry.exchangeRate);
+      } else {
+        setUseForeignCurrency(false);
+        setForeignAmountText('');
+        setForeignCurrency('EUR');
+        setExchangeRate(undefined);
+      }
     } else {
       const target = presetTarget || 'Family';
       const defaultCat = presetCategory || (target === 'Travel' ? 'Transportation' : target === 'Business' ? 'Office & Supplies' : 'Food & Groceries');
       const empty = emptyDraft(normalizeMemberName(currentUser), defaultPaymentType, target, defaultCat);
       setDraft(empty);
       setAmountText('');
+      setUseForeignCurrency(false);
+      setForeignAmountText('');
+      setForeignCurrency('EUR');
+      setExchangeRate(undefined);
     }
+    setConversionNote('');
     setError('');
     setNewEntityPrompt(null);
     setNewEntityName('');
@@ -267,6 +291,40 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
     }
   }, [activeMeta, isOpen]);
 
+  // Auto-convert a foreign-currency amount to USD (debounced) whenever the
+  // amount, currency, or entry date changes, so the main Amount field always
+  // holds the USD value the rest of the app expects.
+  useEffect(() => {
+    if (!isOpen || draft.target !== 'Travel' || !useForeignCurrency) return;
+    const amt = parseFloat(foreignAmountText);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setConversionNote('');
+      return;
+    }
+
+    let cancelled = false;
+    setIsConverting(true);
+    const timer = setTimeout(() => {
+      convertToUSD(amt, foreignCurrency, draft.date).then(result => {
+        if (cancelled) return;
+        setIsConverting(false);
+        if (result) {
+          setAmountText(result.usd.toFixed(2));
+          setExchangeRate(result.rate);
+          setConversionNote(`1 ${foreignCurrency} = $${result.rate.toFixed(4)} USD`);
+        } else {
+          setConversionNote('Rate unavailable — enter the USD amount manually.');
+        }
+      });
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setIsConverting(false);
+    };
+  }, [isOpen, draft.target, useForeignCurrency, foreignAmountText, foreignCurrency, draft.date]);
+
   const taxContext = useMemo(() => {
     return getResolvedTransactionTaxGuidance({
       target: draft.target,
@@ -290,6 +348,11 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       targetEntityLabel: undefined,
       isTaxDeductible: newTarget === 'Business' ? true : d.isTaxDeductible
     }));
+    if (newTarget !== 'Travel') {
+      setUseForeignCurrency(false);
+      setForeignAmountText('');
+      setConversionNote('');
+    }
   };
 
   const handleCreateQuickEntity = async () => {
@@ -343,11 +406,16 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
       setError('Enter the store, restaurant or merchant.');
       return;
     }
+    const foreignAmt = parseFloat(foreignAmountText);
+    const hasForeignAmount = draft.target === 'Travel' && useForeignCurrency && Number.isFinite(foreignAmt) && foreignAmt > 0;
     onSave({
       ...draft,
       amount: Math.round(amount * 100) / 100,
       vendor: draft.vendor.trim(),
-      isTaxDeductible: isRefund ? false : draft.isTaxDeductible
+      isTaxDeductible: isRefund ? false : draft.isTaxDeductible,
+      foreignAmount: hasForeignAmount ? Math.round(foreignAmt * 100) / 100 : undefined,
+      foreignCurrency: hasForeignAmount ? foreignCurrency : undefined,
+      exchangeRate: hasForeignAmount ? exchangeRate : undefined
     });
   };
 
@@ -445,6 +513,47 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
                   }`}
                 />
               </div>
+
+              {draft.target === 'Travel' && (
+                <div className="mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setUseForeignCurrency(v => !v)}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-sky-700 hover:text-sky-900"
+                  >
+                    <Globe2 className="w-3 h-3" />
+                    {useForeignCurrency ? 'Paid in USD instead' : 'Paid in foreign currency'}
+                  </button>
+                  {useForeignCurrency && (
+                    <div className="mt-1.5 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={foreignCurrency}
+                          onChange={e => setForeignCurrency(e.target.value)}
+                          className="field text-xs py-1 w-24 bg-white"
+                          aria-label="Foreign currency"
+                        >
+                          {CURRENCIES.map(c => (
+                            <option key={c.code} value={c.code}>{c.code}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          value={foreignAmountText}
+                          onChange={e => setForeignAmountText(e.target.value)}
+                          placeholder="Amount paid"
+                          className="field text-xs py-1 flex-1"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        {isConverting ? 'Converting…' : conversionNote}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Entity Link (Family Member, Trip, or Office) */}

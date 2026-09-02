@@ -513,7 +513,10 @@ export const App: React.FC = () => {
       targetEntityLabel: draft.targetEntityLabel,
       category: draft.category,
       subcategory: draft.subcategory || undefined,
-      accountName: draft.accountName || undefined
+      accountName: draft.accountName || undefined,
+      foreignAmount: draft.foreignAmount,
+      foreignCurrency: draft.foreignCurrency,
+      exchangeRate: draft.exchangeRate
     };
 
     setTransactions(prev => prev.some(t => t.id === id)
