@@ -29,6 +29,9 @@ import type {
   Trip
 } from '../../types';
 
+/** How far past a trip's end date it still shows in the Linked Trip picker. */
+const TRIP_RECENCY_WINDOW_DAYS = 14;
+
 interface ExpenseFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -214,8 +217,17 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   }, [draft.target, draft.targetEntityId, offices]);
 
   const availableTrips = useMemo(() => {
-    return [...trips].sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
-  }, [trips]);
+    const cutoff = new Date(`${draft.date || todayISO()}T00:00:00`);
+    cutoff.setDate(cutoff.getDate() - TRIP_RECENCY_WINDOW_DAYS);
+    const cutoffISO = cutoff.toISOString().slice(0, 10);
+    return trips
+      .filter(t => {
+        if (draft.targetEntityId && t.id === draft.targetEntityId) return true;
+        if (!t.endDate) return true;
+        return t.endDate >= cutoffISO;
+      })
+      .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+  }, [trips, draft.date, draft.targetEntityId]);
 
   const currentCategories = useMemo(() => {
     return getContextCategories({
