@@ -214,13 +214,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
   }, [draft.target, draft.targetEntityId, offices]);
 
   const availableTrips = useMemo(() => {
-    if (!draft.date) return trips;
-    return trips.filter(t => {
-      if (draft.targetEntityId && t.id === draft.targetEntityId) return true;
-      if (!t.endDate) return true;
-      return draft.date <= t.endDate;
-    });
-  }, [trips, draft.date, draft.targetEntityId]);
+    return [...trips].sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+  }, [trips]);
 
   const currentCategories = useMemo(() => {
     return getContextCategories({
