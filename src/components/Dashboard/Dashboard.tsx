@@ -256,7 +256,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         ) : (
           <div className="divide-y divide-slate-100">
             {recent.map(entry => (
-              <EntryRow key={entry.id} entry={entry} onEdit={onEditEntry} onView={onViewEntry} />
+              <EntryRow key={entry.id} entry={entry} onEdit={onEditEntry} onView={onViewEntry} showDate />
             ))}
           </div>
         )}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
 import { getCategoryMeta, SOURCE_META } from '../../constants/categories';
-import { formatMoney } from '../../utils/transactions';
+import { formatDayLabel, formatMoney } from '../../utils/transactions';
 import type { ExpenseTarget, LedgerEntry } from '../../types';
 
 interface EntryRowProps {
@@ -9,9 +9,11 @@ interface EntryRowProps {
   onEdit?: (entry: LedgerEntry) => void;
   /** Opens the read-only detail sheet for entries owned by a sibling app. */
   onView?: (entry: LedgerEntry) => void;
+  /** Shows the entry's date alongside its time — for flat lists (e.g. Dashboard) that aren't already grouped by day. */
+  showDate?: boolean;
 }
 
-export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView }) => {
+export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView, showDate }) => {
   const isExpense = entry.source === 'Expense';
   const meta = getCategoryMeta(entry.label, entry.target as ExpenseTarget);
   const sourceMeta = SOURCE_META[entry.source] || SOURCE_META.Expense;
@@ -86,6 +88,12 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onEdit, onView }) => 
       <span className="text-right shrink-0">
         <span className="block text-sm font-bold text-slate-900 tabular">{formatMoney(entry.amount)}</span>
         <span className="block text-[11px] text-slate-400">
+          {showDate && (
+            <>
+              {formatDayLabel(entry.date)}
+              {entry.time ? ' · ' : ''}
+            </>
+          )}
           {entry.time || ''}
           {!isExpense && <Lock className="inline w-2.5 h-2.5 ml-1 -mt-0.5" />}
         </span>
