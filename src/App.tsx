@@ -11,6 +11,7 @@ import { PWAInstallPrompt } from './components/PWA/PWAInstallPrompt';
 import { LoginScreen } from './components/Auth/LoginScreen';
 import { TargetEntitiesModal } from './components/Settings/TargetEntitiesModal';
 import { PaymentTypesModal } from './components/Settings/PaymentTypesModal';
+import { AboutPage } from './components/About/AboutPage';
 
 import type {
   ActiveTab,
@@ -718,6 +719,8 @@ export const App: React.FC = () => {
             onManageTaxonomy={() => setIsTaxonomyModalOpen(true)}
           />
         )}
+
+        {activeTab === 'about' && <AboutPage />}
       </main>
 
       <ExpenseFormModal

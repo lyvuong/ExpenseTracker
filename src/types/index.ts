@@ -241,4 +241,4 @@ export interface UserProfile {
   isAnonymous?: boolean;
 }
 
-export type ActiveTab = 'dashboard' | 'log' | 'insights' | 'settings';
+export type ActiveTab = 'dashboard' | 'log' | 'insights' | 'settings' | 'about';

@@ -1,12 +1,13 @@
 import React from 'react';
-import { LayoutDashboard, ReceiptText, PieChart, Settings } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, PieChart, Settings, Info } from 'lucide-react';
 import type { ActiveTab } from '../../types';
 
 const TABS: { id: ActiveTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
   { id: 'log', label: 'Transactions', icon: ReceiptText },
   { id: 'insights', label: 'Insights', icon: PieChart },
-  { id: 'settings', label: 'Settings', icon: Settings }
+  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'about', label: 'About', icon: Info }
 ];
 
 interface TabBarProps {
@@ -37,7 +38,7 @@ export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange }) => (
     </nav>
 
     <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200 safe-bottom no-print">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}

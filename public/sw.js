@@ -41,6 +41,9 @@ self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin) && !event.request.url.includes('fonts.googleapis.com') && !event.request.url.includes('fonts.gstatic.com')) {
     return;
   }
+  // The About page's update check must always hit the network, and its
+  // cache-busted URLs should not pile up in the cache.
+  if (new URL(event.request.url).pathname === '/version.json') return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
