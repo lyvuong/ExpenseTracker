@@ -111,7 +111,7 @@ export const TARGET_META: Record<Target, TargetMeta> = {
 };
 
 // ============================================================================
-// TRAVEL CATEGORIES (From Statements PWA)
+// TRAVEL CATEGORIES
 // ============================================================================
 export const TRAVEL_CATEGORIES: CategoryMeta[] = [
   {
@@ -173,7 +173,7 @@ export const TRAVEL_CATEGORIES: CategoryMeta[] = [
 ];
 
 // ============================================================================
-// FAMILY & HOUSEHOLD CATEGORIES (Matching Statements PWA)
+// FAMILY & HOUSEHOLD CATEGORIES
 // ============================================================================
 export const FAMILY_CATEGORIES: CategoryMeta[] = [
   {
@@ -246,6 +246,23 @@ export const FAMILY_CATEGORIES: CategoryMeta[] = [
       'Restaurants',
       'Coffee Shops',
       'Alcohol & Bars'
+    ]
+  },
+  {
+    id: 'Transportation',
+    name: 'Transportation',
+    icon: Car,
+    color: '#0369a1',
+    hint: 'Fuel, EV charging, parking, tolls, transit, rideshare',
+    subcategories: [
+      'Fuel',
+      'EV Charging',
+      'Parking',
+      'Tolls',
+      'Public Transit',
+      'Rideshare & Taxi',
+      'Car Wash',
+      'Bike & Scooter'
     ]
   },
   {
@@ -399,7 +416,7 @@ export const LEGACY_FAMILY_FALLBACK_CATEGORIES: CategoryMeta[] = [
 ];
 
 // ============================================================================
-// BUSINESS CATEGORIES (From Statements PWA)
+// BUSINESS CATEGORIES
 // ============================================================================
 export const BUSINESS_CATEGORIES: CategoryMeta[] = [
   {

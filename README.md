@@ -106,6 +106,7 @@ ExpenseTracker supports 3 primary expense domains with dedicated category taxono
 | **Personal Care** | Haircuts & Salon · Spa & Massage · Cosmetics & Toiletries |
 | **Shopping** | Clothing & Apparel · Shoes & Footwear · Accessories & Jewelry · Electronics & Gadgets · General Merchandise |
 | **Food & Groceries** | Groceries · Restaurants · Coffee Shops · Alcohol & Bars |
+| **Transportation** | Fuel · EV Charging · Parking · Tolls · Public Transit · Rideshare & Taxi · Car Wash · Bike & Scooter |
 | **Entertainment & Leisure** | Movies & Streaming · Concerts & Events · Hobbies · Books & Magazines · Video Games · Digital Service |
 | **Education** | Tuition · Student Loans · Books & Supplies · Courses & Certifications |
 | **Gifts & Donations** | Gifts · Charitable Donations · Religious Contributions |

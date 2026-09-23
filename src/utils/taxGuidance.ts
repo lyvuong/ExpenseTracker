@@ -208,6 +208,11 @@ export const CATEGORY_TAX_GUIDANCE: Record<string, TaxGuidance> = {
     scheduleOrForm: 'Non-deductible',
     deductibleStatus: 'non-deductible'
   },
+  'Family::Transportation': {
+    purpose: 'Personal commuting and everyday household transportation are non-deductible (IRC §262); employer pre-tax commuter benefits may cover transit and parking (IRC §132(f)).',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
   'Entertainment & Leisure': {
     purpose: 'Personal recreation, entertainment, and hobby expenses are non-deductible.',
     scheduleOrForm: 'Non-deductible',
@@ -980,6 +985,47 @@ export const SUBCATEGORY_TAX_GUIDANCE: Record<string, TaxGuidance> = {
   'Transfer': {
     purpose: 'Non-taxable transfer of funds between personal accounts.',
     scheduleOrForm: 'Non-taxable',
+    deductibleStatus: 'non-deductible'
+  },
+  // Family Transportation — overrides business/travel guidance that shares these subcategory names
+  'Family::Fuel': {
+    purpose: 'Personal vehicle fuel is non-deductible; log business miles in CarTracker to claim the standard mileage rate on Schedule C.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Family::EV Charging': {
+    purpose: 'Personal EV charging is non-deductible; a home charger installation may qualify for the Form 8911 credit (up to $1,000).',
+    scheduleOrForm: 'Non-deductible / Form 8911',
+    deductibleStatus: 'non-deductible'
+  },
+  'Family::Parking': {
+    purpose: 'Personal and commuting parking is non-deductible; employer pre-tax qualified parking benefits may apply (IRC §132(f)).',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Family::Tolls': {
+    purpose: 'Personal and commuting tolls are non-deductible personal expenses.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Family::Public Transit': {
+    purpose: 'Personal commuting transit is non-deductible; employer pre-tax transit passes may apply (IRC §132(f)).',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Family::Rideshare & Taxi': {
+    purpose: 'Personal rideshare and taxi fares are non-deductible; rides to medical care may count as Schedule A medical expenses.',
+    scheduleOrForm: 'Non-deductible / Schedule A (medical)',
+    deductibleStatus: 'non-deductible'
+  },
+  'Family::Car Wash': {
+    purpose: 'Personal vehicle upkeep is non-deductible.',
+    scheduleOrForm: 'Non-deductible',
+    deductibleStatus: 'non-deductible'
+  },
+  'Family::Bike & Scooter': {
+    purpose: 'Personal bike and scooter rentals or share rides are non-deductible.',
+    scheduleOrForm: 'Non-deductible',
     deductibleStatus: 'non-deductible'
   },
 
