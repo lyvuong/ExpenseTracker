@@ -1,7 +1,7 @@
 {
   "name": "expensetracker-pwa",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "firebase": "^12.16.0",
+    "firebase": "12.16.0",
     "lucide-react": "^1.27.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
