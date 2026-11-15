@@ -498,7 +498,8 @@ export const createHomeRecord = async (
 
 export const verifyOrCreateHousehold = async (
   familyCode: string,
-  userProfile: UserProfile
+  userProfile: UserProfile,
+  options: { createIfMissing?: boolean } = {}
 ): Promise<{ success: boolean; message: string; isNew?: boolean }> => {
   if (!db) return { success: true, message: 'Offline mode active.' };
 
@@ -560,6 +561,10 @@ export const verifyOrCreateHousehold = async (
       }
 
       return { success: true, isNew: false, message: `Joined household ${code}.` };
+    }
+
+    if (options.createIfMissing === false) {
+      return { success: false, message: `Household Code "${code}" does not exist.` };
     }
 
     const newHousehold = {

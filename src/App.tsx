@@ -9,6 +9,7 @@ import { Insights } from './components/Insights/Insights';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { PWAInstallPrompt } from './components/PWA/PWAInstallPrompt';
 import { LoginScreen } from './components/Auth/LoginScreen';
+import { HouseholdChallengeScreen } from './components/Auth/HouseholdChallengeScreen';
 import { TargetEntitiesModal } from './components/Settings/TargetEntitiesModal';
 import { PaymentTypesModal } from './components/Settings/PaymentTypesModal';
 import { AboutPage } from './components/About/AboutPage';
@@ -192,6 +193,9 @@ export const App: React.FC = () => {
         return;
       }
 
+      // No household chosen yet: read and seed nothing until the code is verified.
+      if (!familyCode) return;
+
       // 1. Transactions subscription
       let hasSeeded = false;
       unsubTransactions = subscribeFirestoreTransactions(userProfile.uid, familyCode, (cloudTransactions) => {
@@ -309,7 +313,7 @@ export const App: React.FC = () => {
 
   // Sibling app entities (vehicles / homes)
   useEffect(() => {
-    if (!isFirebaseActive || !user) {
+    if (!isFirebaseActive || !user || !familyCode) {
       setVehicles([]);
       setHomes([]);
       return;
@@ -655,6 +659,19 @@ export const App: React.FC = () => {
         onGoogleSignIn={loginWithGoogle}
         onEmailSignIn={loginWithEmail}
         onEmailRegister={registerWithEmail}
+      />
+    );
+  }
+
+  // Signed in but no household yet: ask for the code before showing (or loading) anything.
+  if (isFirebaseActive && user && !familyCode) {
+    return (
+      <HouseholdChallengeScreen
+        user={user}
+        onHouseholdVerified={(code) => {
+          setStoredFamilyCode(code);
+          setFamilyCodeState(code);
+        }}
       />
     );
   }
