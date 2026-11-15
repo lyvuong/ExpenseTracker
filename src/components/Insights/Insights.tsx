@@ -22,9 +22,12 @@ import {
   recentMonthKeys
 } from '../../utils/transactions';
 import type { LedgerEntry, Target } from '../../types';
+import { GroupsView } from './GroupsView';
 
 interface InsightsProps {
   entries: LedgerEntry[];
+  onEditEntry?: (entry: LedgerEntry) => void;
+  onViewEntry?: (entry: LedgerEntry) => void;
 }
 
 const sumBy = (entries: LedgerEntry[], key: (e: LedgerEntry) => string) => {
@@ -45,7 +48,8 @@ const TARGET_COLORS: Record<string, string> = {
   Other: '#94a3b8'
 };
 
-export const Insights: React.FC<InsightsProps> = ({ entries }) => {
+export const Insights: React.FC<InsightsProps> = ({ entries, onEditEntry, onViewEntry }) => {
+  const [view, setView] = useState<'monthly' | 'groups'>('monthly');
   const [month, setMonth] = useState<string>(currentMonthKey());
   const [targetScope, setTargetScope] = useState<Target | 'All'>('All');
 
@@ -95,8 +99,32 @@ export const Insights: React.FC<InsightsProps> = ({ entries }) => {
     boxShadow: '0 8px 24px -12px rgba(15,23,42,0.3)'
   };
 
+  const viewToggle = (
+    <div className="inline-flex rounded-xl border border-slate-200 bg-white p-0.5">
+      {([['monthly', 'By month'], ['groups', 'Trips, cars & homes']] as const).map(([id, label]) => (
+        <button
+          key={id}
+          onClick={() => setView(id)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${view === id ? 'bg-slate-900 text-white' : 'text-slate-600'}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (view === 'groups') {
+    return (
+      <div className="space-y-4">
+        {viewToggle}
+        <GroupsView entries={entries} onEditEntry={onEditEntry} onViewEntry={onViewEntry} />
+      </div>
+    );
+  }
+
   return (
     <section className="space-y-4">
+      {viewToggle}
 
       {/* Target Domain Scope Pills */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">

@@ -697,7 +697,9 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'insights' && <Insights entries={entries} />}
+        {activeTab === 'insights' && (
+          <Insights entries={entries} onEditEntry={openEditExpense} onViewEntry={setViewingEntry} />
+        )}
 
         {activeTab === 'settings' && (
           <SettingsPanel
