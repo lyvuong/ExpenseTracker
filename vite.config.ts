@@ -6,25 +6,33 @@ import { execSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const getBuildHash = () => {
-  // Cloudflare Pages commit SHA
-  if (process.env.CF_PAGES_COMMIT_SHA) {
-    return process.env.CF_PAGES_COMMIT_SHA.slice(0, 7)
-  }
-  // GitHub Actions commit SHA
-  if (process.env.GITHUB_SHA) {
-    return process.env.GITHUB_SHA.slice(0, 7)
-  }
-  // Local Git commit hash
+// --- Standard build info (identical in every project) -----------------------------------------
+// package.json "version" is only the base "<major>.<minor>" (bump it by hand for a deliberate
+// release). The shipped version is "<major>.<minor>.<commit count>", derived from git at build
+// time, so there is no per-commit bump hook and no version conflicts between clones or branches.
+const git = (args: string): string => {
   try {
-    return execSync('git rev-parse --short HEAD').toString().trim()
+    return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
   } catch {
-    return ''
+    return '';
   }
-}
+};
 
-const buildHash = getBuildHash()
-const buildDate = new Date().toISOString().split('T')[0]
+const getBuildInfo = (baseVersion: string) => {
+  const [major = '0', minor = '0'] = baseVersion.split('.');
+  // CI clones are often shallow, which would undercount commits — deepen first if we can.
+  if (git('rev-parse --is-shallow-repository') === 'true') git('fetch --unshallow --quiet');
+  const count = git('rev-parse --is-shallow-repository') === 'true' ? '' : git('rev-list --count HEAD');
+  const sha = process.env.CF_PAGES_COMMIT_SHA || process.env.WORKERS_CI_COMMIT_SHA || process.env.GITHUB_SHA || '';
+  return {
+    version: `${major}.${minor}.${count || '0'}`,
+    buildHash: sha ? sha.slice(0, 7) : git('rev-parse --short HEAD'),
+    buildDate: new Date().toISOString().split('T')[0]
+  };
+};
+
+const { version: appVersion, buildHash, buildDate } = getBuildInfo(packageJson.version);
+// ----------------------------------------------------------------------------------------------
 
 // Writes dist/version.json so the running app can fetch it (cache-busted, bypassing
 // the service worker's asset cache) to detect when a newer build has been deployed.
@@ -35,7 +43,7 @@ const versionManifestPlugin = (): Plugin => ({
     const outDir = resolve(import.meta.dirname, 'dist')
     writeFileSync(
       resolve(outDir, 'version.json'),
-      JSON.stringify({ version: packageJson.version, buildHash, buildDate })
+      JSON.stringify({ version: appVersion, buildHash, buildDate })
     )
   }
 })
@@ -44,7 +52,7 @@ const versionManifestPlugin = (): Plugin => ({
 export default defineConfig({
   plugins: [react(), tailwindcss(), versionManifestPlugin()],
   define: {
-    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_VERSION__: JSON.stringify(appVersion),
     __BUILD_DATE__: JSON.stringify(buildDate),
     __BUILD_HASH__: JSON.stringify(buildHash)
   },
