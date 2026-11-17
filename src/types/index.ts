@@ -29,6 +29,8 @@ export interface Trip {
   tripType?: string;  // Cruise, Land Tour, Road Trip, Beach Vacation, City Break, etc.
   destinations?: string[];
   notes?: string;
+  travelerCount?: number;
+  excludeFuelFromCost?: boolean; // Set in Statements: omit date-matched Car fuel from this trip's cost
 }
 
 export interface Office {

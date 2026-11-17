@@ -21,11 +21,12 @@ import {
   monthLabel,
   recentMonthKeys
 } from '../../utils/transactions';
-import type { LedgerEntry, Target } from '../../types';
+import type { LedgerEntry, Target, Trip } from '../../types';
 import { GroupsView } from './GroupsView';
 
 interface InsightsProps {
   entries: LedgerEntry[];
+  trips?: Trip[];
   onEditEntry?: (entry: LedgerEntry) => void;
   onViewEntry?: (entry: LedgerEntry) => void;
 }
@@ -48,7 +49,7 @@ const TARGET_COLORS: Record<string, string> = {
   Other: '#94a3b8'
 };
 
-export const Insights: React.FC<InsightsProps> = ({ entries, onEditEntry, onViewEntry }) => {
+export const Insights: React.FC<InsightsProps> = ({ entries, trips = [], onEditEntry, onViewEntry }) => {
   const [view, setView] = useState<'monthly' | 'groups'>('monthly');
   const [month, setMonth] = useState<string>(currentMonthKey());
   const [targetScope, setTargetScope] = useState<Target | 'All'>('All');
@@ -117,7 +118,7 @@ export const Insights: React.FC<InsightsProps> = ({ entries, onEditEntry, onView
     return (
       <div className="space-y-4">
         {viewToggle}
-        <GroupsView entries={entries} onEditEntry={onEditEntry} onViewEntry={onViewEntry} />
+        <GroupsView entries={entries} trips={trips} onEditEntry={onEditEntry} onViewEntry={onViewEntry} />
       </div>
     );
   }

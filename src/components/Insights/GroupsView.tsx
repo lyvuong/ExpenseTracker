@@ -4,34 +4,34 @@ import { getCategoryMeta } from '../../constants/categories';
 import { EntryRow } from '../Expenses/EntryRow';
 import { buildGroups, GROUP_KINDS, type EntryGroup, type GroupKind } from '../../utils/groups';
 import { formatMoney, yearKey } from '../../utils/transactions';
-import type { LedgerEntry } from '../../types';
+import type { LedgerEntry, Trip } from '../../types';
 
 interface GroupsViewProps {
   entries: LedgerEntry[];
+  trips?: Trip[];
   onEditEntry?: (entry: LedgerEntry) => void;
   onViewEntry?: (entry: LedgerEntry) => void;
 }
 
 const fmtRange = (a: string, b: string) => (a === b ? a : `${a} → ${b}`);
 
-export const GroupsView: React.FC<GroupsViewProps> = ({ entries, onEditEntry, onViewEntry }) => {
+export const GroupsView: React.FC<GroupsViewProps> = ({ entries, trips = [], onEditEntry, onViewEntry }) => {
   const [kind, setKind] = useState<GroupKind | 'All'>('All');
   const [year, setYear] = useState<string>('All');
   const [openKey, setOpenKey] = useState<string | null>(null);
 
-  const years = useMemo(
-    () => Array.from(new Set(entries.map(e => yearKey(e.date)).filter(Boolean))).sort().reverse(),
-    [entries]
-  );
+  // Groups are always built from ALL entries so a trip's total never depends on the year filter;
+  // the year selector only chooses which groups to list (by trip start date, as in Statements).
+  const groups = useMemo(() => buildGroups(entries, trips), [entries, trips]);
 
-  const groups = useMemo(
-    () => buildGroups(year === 'All' ? entries : entries.filter(e => yearKey(e.date) === year)),
-    [entries, year]
+  const years = useMemo(
+    () => Array.from(new Set(groups.map(g => yearKey(g.anchorDate)).filter(Boolean))).sort().reverse(),
+    [groups]
   );
 
   const visible = useMemo(
-    () => groups.filter(g => kind === 'All' || g.kind === kind).sort((a, b) => b.total - a.total),
-    [groups, kind]
+    () => groups.filter(g => (kind === 'All' || g.kind === kind) && (year === 'All' || yearKey(g.anchorDate) === year)).sort((a, b) => b.total - a.total),
+    [groups, kind, year]
   );
 
   const open: EntryGroup | undefined = openKey ? groups.find(g => g.key === openKey) : undefined;

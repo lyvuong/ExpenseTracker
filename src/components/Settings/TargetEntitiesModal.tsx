@@ -354,6 +354,8 @@ export const TargetEntitiesModal: React.FC<TargetEntitiesModalProps> = ({
     switch (activeTarget) {
       case 'Travel':
         entityToSave = {
+          // Keep fields this form doesn't edit (traveler count, fuel opt-out, destinations).
+          ...(trips.find(t => t.id === id) || {}),
           id,
           name: entityName.trim(),
           startDate: entityDateStart || undefined,
